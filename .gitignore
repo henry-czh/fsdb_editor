@@ -1,2 +1,4 @@
 ./fsdb_read/*.o
 ./fsdb_read/fsdb_read
+./fsdb_read/read_verilog
+./fsdb_read/read_verilog.o
