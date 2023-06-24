@@ -1,3 +1,3 @@
 fsdb_reader/*.o
-./fsdb_reader/fsdb_read
-./fsdb_reader/read_verilog
+fsdb_reader/fsdb_read
+fsdb_reader/read_verilog
