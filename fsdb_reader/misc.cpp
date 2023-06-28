@@ -6,11 +6,11 @@
 #include<fstream>
 using namespace std;
 
-#define max_kv 64
+#define MAX_KV 64
 
 typedef struct sigInfo_t
 {
-	char name[max_kv];
+	char name[MAX_KV];
 	int idcode;
 } sigInfo;
 
@@ -22,8 +22,8 @@ read_config()
     int max_line = 1024;
     char line[max_line];
     char key[max_line];
-    char k[max_kv];
-    char v[max_kv];
+    char k[MAX_KV];
+    char v[MAX_KV];
     SIGNAL_MAP cfgs;
 
     FILE *fp = NULL;
@@ -32,13 +32,13 @@ read_config()
     while(fgets(line, max_line, fp)) {
         if (line[0] != ' ') {
             sscanf(line, "%s", key);
-            printf("key[%s]\n", key);
+            //printf("key[%s]\n", key);
             map<string, sigInfo> cfg;
             cfgs[key] = cfg;
         } else {
             *strchr(line, ':') = ' ';
             sscanf(line, "%s %s", k, v);
-            printf("k[%s] v[%s]\n", k, v);
+            //printf("k[%s] v[%s]\n", k, v);
 	    sigInfo si;
 	    strcpy(si.name, v);
             cfgs[key][k] = si;
@@ -48,7 +48,8 @@ read_config()
 
     fclose(fp);
 
-    printf("\ncfgs[chip_tb.skt1.top.apu0][psel] = %s\n", cfgs["chip_tb.skt1.top.apu0"]["psel"].name);
+    printf("\ncfgs[chip_tb.skt1.top.apu0][psel] = %s\n", 
+	        cfgs["chip_tb.skt1.top.apu0"]["psel"].name);
     return cfgs;
 }
 
