@@ -1,3 +1,4 @@
 fsdb_reader/*.o
+fsdb_reader/*.out
 fsdb_reader/fsdb_read
 fsdb_reader/read_verilog

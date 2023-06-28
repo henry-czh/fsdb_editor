@@ -1,0 +1,10 @@
+chip_tb.skt0.top.apu0
+ paddr: paddr_s0
+ psel: psel_s0
+ penable: penable_s0
+ pdata: pdata_s0
+chip_tb.skt1.top.apu0
+ paddr: paddr_s0
+ psel: psel_s0
+ penable: penable_s0
+ pdata: pdata_s0
