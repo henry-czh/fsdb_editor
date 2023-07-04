@@ -8,3 +8,6 @@ chip_tb.skt1.top.apu0
  psel: psel_s0
  penable: penable_s0
  pdata: pdata_s0
+test.dut0
+ a: a_dut0
+ b: b_dut0

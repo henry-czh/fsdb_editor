@@ -12,139 +12,11 @@
 //
 
 
-//
-// FSDB_READER is internally used in NOVAS
-//
-#ifdef FSDB_READER
-#undef FSDB_READER
-#endif
+#include "fsdb_reader.h"
 
-#include "ffrAPI.h"
-#include <stdio.h>
-#include <stdlib.h>
-
-#include "scope_tree.h"
-
-#ifndef FALSE
-#define FALSE	0
-#endif
-
-#ifndef TRUE
-#define TRUE	1
-#endif
-
-
-//
-// The tree callback function, it's used to traverse the design 
-// hierarchies. 
-//
-static bool_T __MyTreeCB(fsdbTreeCBType cb_type, 
-			 void *client_data, void *tree_cb_data);
-
-
-//
-// dump scope definition
-//
-static void 
-__DumpScope(fsdbTreeCBDataScope *scope);
-
-
-//
-// dump var definition 
-// 
-static void 
-__DumpVar(fsdbTreeCBDataVar *var);
-
-
-static void 
-__PrintTimeValChng(ffrVCTrvsHdl vc_trvs_hdl, 
-		   fsdbTag64 *time, byte_T *vc_ptr);
-
-int 
-main(int argc, char *argv[])
+void
+loadSignals(ffrObject* fsdb_obj, SIGNAL_MAP signal_map)
 {
-    if (2 != argc) {
-	fprintf(stderr, "usage: read_verilog verilog_type_fsdb\n");
-	return FSDB_RC_FAILURE;
-    }
-
-    // 
-    // check the file to see if it's a fsdb file or not.
-    //
-    if (FALSE == ffrObject::ffrIsFSDB(argv[1])) {
-	fprintf(stderr, "%s is not an fsdb file.\n", argv[1]);
-	return FSDB_RC_FAILURE;
-    }
-
-    ffrFSDBInfo fsdb_info;
-
-    ffrObject::ffrGetFSDBInfo(argv[1], fsdb_info);
-    if (FSDB_FT_VERILOG != fsdb_info.file_type) {
-  	fprintf(stderr, "file type is not verilog.\n");
-	return FSDB_RC_FAILURE;
-    }
-
-    //
-    // Open the fsdb file.
-    //
-    // From fsdb v2.0(Debussy 5.0), there are two APIs to open a 
-    // fsdb file: ffrOpen() and ffrOpen2(). Both APIs take three 
-    // parameters, the first one is the fsdb file name, the second 
-    // one is a tree callback function written by application, the 
-    // last one is the client data that application would like 
-    // fsdb reader to pass it back in tree callback function.
-    //
-    // Open a fsdb file with ffrOpen(), the tree callback function
-    // will be activated many times during open session; open a fsdb
-    // file with ffrOpen2(), the tree callback function will not be
-    // activated during open session, applicaiton has to call an API
-    // called "ffrReadScopeVarTree()" to activate the tree callback
-    // function. 
-    // 
-    // In tree callback function, application can tell what the
-    // callback data is, based on the callback type. For example, if 
-    // the callback type is scope(FFR_TREE_CBT_SCOPE), then 
-    // applicaiton knows that it has to perform (fsdbTreeCBDataScope*) 
-    // type case on the callback data so that it can read the scope 
-    // defition.
-    //
-    ffrObject *fsdb_obj =
-	ffrObject::ffrOpen3(argv[1]);
-    if (NULL == fsdb_obj) {
-	fprintf(stderr, "ffrObject::ffrOpen() failed.\n");
-	exit(FSDB_RC_OBJECT_CREATION_FAILED);
-    }
-    fsdb_obj->ffrSetTreeCBFunc(__MyTreeCB, NULL);
-
-    if (FSDB_FT_VERILOG != fsdb_obj->ffrGetFileType()) {
-	fprintf(stderr, 
-		"%s is not verilog type fsdb, just return.\n", argv[1]);
-	fsdb_obj->ffrClose();
-	return FSDB_RC_SUCCESS;
-    }
-
-    //
-    // Activate the tree callback funciton, read the design 
-    // hierarchies. Application has to perform proper type case 
-    // on tree callback data based on the callback type, then uses 
-    // the type case structure view to access the wanted data.
-    //
-    fsdb_obj->ffrReadScopeVarTree();
-
-    //
-    // Each unique var is represented by a unique idcode in fsdb 
-    // file, these idcodes are positive integer and continuous from 
-    // the smallest to the biggest one. So the maximum idcode also 
-    // means that how many unique vars are there in this fsdb file. 
-    //
-    // Application can know the maximum var idcode by the following
-    // API:
-    //
-    //		ffrGetMaxVarIdcode()
-    //
-    fsdbVarIdcode max_var_idcode = fsdb_obj->ffrGetMaxVarIdcode();
-
-
     //
     // In order to load value changes of vars onto memory, application
     // has to tell fsdb reader about what vars it's interested in. 
@@ -153,10 +25,28 @@ main(int argc, char *argv[])
     //
     //		ffrAddToSignalList()
     // 
-    int i;
-    for (i = FSDB_MIN_VAR_IDCODE; i <= max_var_idcode; i++)
-    	fsdb_obj->ffrAddToSignalList(i);
 
+    map<string,map<string,sigInfo>>::iterator t;
+    map<string, sigInfo>::iterator signal_it;
+    map<string, int> chi_map;
+    fsdbVarIdcode chi_sig_arr[CHI_SIG_NUM];
+
+    // 遍历整个配置map项
+    for(t = signal_map.begin(); t != signal_map.end(); t++)
+    {
+        //如果instance对应的map不为空，则为抓取到了对应信号的idcode
+        if(t->second.size())
+        {
+            int i = 0;
+            for(signal_it = t->second.begin(); signal_it != t->second.end(); signal_it++)
+            {
+                fsdb_obj->ffrAddToSignalList(signal_it->second.idcode);
+                chi_map[signal_it->second.name] = signal_it->second.idcode;
+                chi_sig_arr[i] = signal_it->second.idcode;
+                i++;
+            }
+        }
+    }
 
     //
     // Load the value changes of the selected vars onto memory. Note 
@@ -164,190 +54,69 @@ main(int argc, char *argv[])
     //
     fsdb_obj->ffrLoadSignals();
 
+    // 设置一个以time-base的value change抓取
+    ffrTimeBasedVCTrvsHdl tb_vc_trvs_hdl;
+    byte_T *vc_ptr;
+    fsdbVarIdcode var_idcode;
+    fsdbXTag time;
+    fsdbSeqNum seq_num;
 
-    //
-    // In order to traverse the value changes of a specific var,
-    // application must create a value change traverse handle for 
-    // that sepcific var. Once the value change traverse handle is 
-    // created successfully, there are lots of traverse functions 
-    // available to traverse the value changes backward and forward, 
-    // or jump to a sepcific time, etc.
-    //
-    ffrVCTrvsHdl vc_trvs_hdl = 
-	fsdb_obj->ffrCreateVCTraverseHandle(max_var_idcode); 
-    if (NULL == vc_trvs_hdl) {
-	fprintf(stderr, "Failed to create a traverse handle(%u)\n", 
-		max_var_idcode);
-	exit(FSDB_RC_OBJECT_CREATION_FAILED);
+    tb_vc_trvs_hdl = fsdb_obj->ffrCreateTimeBasedVCTrvsHdl(CHI_SIG_NUM,chi_sig_arr);
+
+    if (NULL == tb_vc_trvs_hdl) 
+    {
+        fprintf(stderr, "Fail to create time-based value change trvs hdl!\n");
     }
 
-
-    fsdbTag64 time;
-    int	      glitch_num;
-    byte_T    *vc_ptr;
-
-    //
-    // Check to see if this var has value changes or not.
-    //
-    if (FALSE == vc_trvs_hdl->ffrHasIncoreVC()) {
-        fprintf(stderr, 
-	        "This var(%u) has no value change at all.\n", 
-		max_var_idcode);
+    if (FSDB_RC_SUCCESS == tb_vc_trvs_hdl->ffrGetVC(&vc_ptr)) {
+        tb_vc_trvs_hdl->ffrGetVarIdcode(&var_idcode);
+        tb_vc_trvs_hdl->ffrGetXTag(&time);
+        tb_vc_trvs_hdl->ffrGetSeqNum(&seq_num);
+        fprintf(stdout, "(%u %u) => var(%u): seq_num: %u val: ",
+            time.hltag.H, time.hltag.L, (unsigned int)var_idcode, seq_num);
+        PrintAsVerilog(vc_ptr, 1);
     }
-    else {
-        //
-        // Get the maximum time(xtag) where has value change. 
-        //
-        if (FSDB_RC_SUCCESS != 
-	    vc_trvs_hdl->ffrGetMaxXTag((void*)&time)) {
-	    fprintf(stderr, "should not happen.\n");
-	    exit(FSDB_RC_FAILURE);
- 	}
-       	fprintf(stderr, "trvs hdl(%u): maximum time is (%u %u).\n", 
-            	max_var_idcode, time.H, time.L);
-            
-        //
-        // Get the minimum time(xtag) where has value change. 
-        // 
-        if (FSDB_RC_SUCCESS != 
-	    vc_trvs_hdl->ffrGetMinXTag((void*)&time)) {
-	    fprintf(stderr, "should not happen.\n");
-	    exit(FSDB_RC_FAILURE);
- 	}
-       	fprintf(stderr, "trvs hdl(%u): minimum time is (%u %u).\n", 
-            	max_var_idcode, time.H, time.L);
-    
-        //
-        // Jump to the specific time specified by the parameter of 
-	// ffrGotoXTag(). The specified time may have or have not 
-	// value change; if it has value change, then the return time 
-	// is exactly the same as the specified time; if it has not 
-	// value change, then the return time will be aligned forward
-	// (toward smaller time direction). 
-        //
-        // There is an exception for the jump alignment: If the 
-	// specified time is smaller than the minimum time where has 
-	// value changes, then the return time will be aligned to the 
-	// minimum time.
-        //
-        if (FSDB_RC_SUCCESS != vc_trvs_hdl->ffrGotoXTag((void*)&time)) {
-	    fprintf(stderr, "should not happen.\n");
-	    exit(FSDB_RC_FAILURE);
-        }	
-    
-        //
-        // Get the value change. 
-        //
-        if (FSDB_RC_SUCCESS == vc_trvs_hdl->ffrGetVC(&vc_ptr))
-            __PrintTimeValChng(vc_trvs_hdl, &time, vc_ptr);
-         
-    
-        //
-        // Value change traverse handle keeps an internal index
-        // which points to the current time and value change; each
-        // traverse API may move that internal index backward or
-        // forward.
-        // 
-        // ffrGotoNextVC() moves the internal index backward so
-        // that it points to the next value change and the time
-        // where the next value change happened.
-        //  
-        for ( ; FSDB_RC_SUCCESS == vc_trvs_hdl->ffrGotoNextVC(); ) {
-            vc_trvs_hdl->ffrGetXTag(&time);
-      	    vc_trvs_hdl->ffrGetVC(&vc_ptr);
-      	    __PrintTimeValChng(vc_trvs_hdl, &time, vc_ptr);
-        }
-            
-        // 
-        // ffrGotoPrevVC() moves the internal index forward so
-        // that it points to the previous value change and the time
-        // where the previous value change happened.
-        //  
-        for ( ; FSDB_RC_SUCCESS == vc_trvs_hdl->ffrGotoPrevVC(); ) {
-            vc_trvs_hdl->ffrGetXTag(&time);
-      	    vc_trvs_hdl->ffrGetVC(&vc_ptr);
-      	    __PrintTimeValChng(vc_trvs_hdl, &time, vc_ptr);
+
+}
+
+/*
+** Print as Verilog standard values.
+** x0z1-z10z 0x0x-1011...
+*/
+void
+PrintAsVerilog(byte_T *ptr, uint_T size)
+{
+    const int VALUES_IN_A_SEG = 8;
+    const int VALUES_DUMPED_IN_A_LINE = 40;
+    int i, j, end_idx;
+    byte_T a_byte;
+    char val_tbl[] = "01xz";
+
+    for(i = 0; i < size; i++) {
+        a_byte = *(ptr+i);
+        if (a_byte < 4)
+            fprintf(stdout, "%c", val_tbl[a_byte]);
+        else
+            fprintf(stdout, "?");
+
+        if (3 == (i % VALUES_IN_A_SEG) && (i < size-1))
+            fprintf(stdout, "-");
+        
+        if ((VALUES_IN_A_SEG - 1) == (i % VALUES_IN_A_SEG)) {
+            if ((VALUES_DUMPED_IN_A_LINE - 1) ==
+                (i % VALUES_DUMPED_IN_A_LINE)) {
+                fprintf(stdout, "\n");
+            }
+            else {
+                fprintf(stdout, " ");
+            }
         }
     }
-    // 
-    // free this value change traverse handle 
-    //
-    vc_trvs_hdl->ffrFree();
 
-    //
-    // We have traversed the value changes associated with the var 
-    // whose idcode is max_var_idcode, now we are going to traverse
-    // the value changes of the other vars. The idcode of the other
-    // vars is from FSDB_MIN_VAR_IDCODE, which is 1, to 
-    // (max_var_idcode - 1)  
-    //
-    for (i = FSDB_MIN_VAR_IDCODE; i < max_var_idcode; i++) {
-   	//
-        // create a value change traverse handle associated with
-  	// current traversed var.
- 	// 
- 	vc_trvs_hdl = fsdb_obj->ffrCreateVCTraverseHandle(i);
-        if (NULL == vc_trvs_hdl) {
-	    fprintf(stderr, "Failed to create a traverse handle(%u)\n", 
-		    max_var_idcode);
-	    exit(FSDB_RC_OBJECT_CREATION_FAILED);
-        }
-  	fprintf(stderr, "\n");
-	fprintf(stderr, "Current traversed var idcode is %u\n", i);
-
-	//
-	// Check to see if this var has value changes or not.
-	//
-	if (FALSE == vc_trvs_hdl->ffrHasIncoreVC()) {
-	    fprintf(stderr, 
-		"This var(%u) has no value change at all.\n", i);
-	    vc_trvs_hdl->ffrFree();
-	    continue;
-	}
-
-        //
-        // Get the minimum time(xtag) where has value change. 
-        // 
-	vc_trvs_hdl->ffrGetMinXTag((void*)&time);
-
-	//
-	// Jump to the minimum time(xtag). 
-	// 
-	vc_trvs_hdl->ffrGotoXTag((void*)&time);
-
-	//
-	// Traverse all the value changes from the minimum time
-	// to the maximum time.
-	//
-	do {
-	    vc_trvs_hdl->ffrGetXTag(&time);
-	    vc_trvs_hdl->ffrGetVC(&vc_ptr);
-	    __PrintTimeValChng(vc_trvs_hdl, &time, vc_ptr);
-	} while(FSDB_RC_SUCCESS == vc_trvs_hdl->ffrGotoNextVC());
-
-        // 
-        // free this value change traverse handle
-        //
-        vc_trvs_hdl->ffrFree();
-    } 
-
-    fprintf(stderr, "Watch Out Here!\n");
-    fprintf(stderr, "We are going to reset the signal list.\n");
-    fprintf(stderr, "Press enter to continue running.");
-    getchar();
-
-    fsdb_obj->ffrResetSignalList();
-    for (i = FSDB_MIN_VAR_IDCODE; i <= max_var_idcode; i++) {
-    	if (TRUE == fsdb_obj->ffrIsInSignalList(i)) 
-	    fprintf(stderr, "var idcode %d is in signal list.\n", i);
-	else
-	    fprintf(stderr, "var idcode %d is not in signal list.\n", i);
+    if ((VALUES_DUMPED_IN_A_LINE - 1) != (i %
+        VALUES_DUMPED_IN_A_LINE)) {
+        fprintf(stdout, "\n");
     }
-    fsdb_obj->ffrUnloadSignals();
-
-
-    fsdb_obj->ffrClose();
-    return 0;
 }
 
 static void 
@@ -454,24 +223,43 @@ __PrintTimeValChng(ffrVCTrvsHdl vc_trvs_hdl,
     }
 }
 
-static bool_T __MyTreeCB(fsdbTreeCBType cb_type, 
+char current_path[MAX_LINE];
+char matched_path[MAX_LINE];
+
+bool_T __MyTreeCB(fsdbTreeCBType cb_type, 
 			 void *client_data, void *tree_cb_data)
 {
+    map<string,map<string,sigInfo>>::iterator t;
+    SIGNAL_MAP* signal_map_local;
+    signal_map_local = (SIGNAL_MAP*)client_data;
+
     switch (cb_type) {
     case FSDB_TREE_CBT_BEGIN_TREE:
 	fprintf(stderr, "<BeginTree>\n");
 	break;
 
     case FSDB_TREE_CBT_SCOPE:
-	__DumpScope((fsdbTreeCBDataScope*)tree_cb_data);
+	__DumpScope((fsdbTreeCBDataScope*)tree_cb_data, current_path);
+
+    t = signal_map_local->find(current_path);
+    if(t != signal_map_local->end())
+    {
+        strcpy(matched_path, current_path);
+        printf("find matched path: %s\n", matched_path);
+    }
+    else
+    {
+        matched_path[0] = 0;
+    }
 	break;
 
     case FSDB_TREE_CBT_VAR:
-	__DumpVar((fsdbTreeCBDataVar*)tree_cb_data);
+	__DumpVar((fsdbTreeCBDataVar*)tree_cb_data, *((SIGNAL_MAP*)client_data));
 	break;
 
     case FSDB_TREE_CBT_UPSCOPE:
 	fprintf(stderr, "<Upscope>\n");
+    DelPath(current_path);
 	break;
 
     case FSDB_TREE_CBT_END_TREE:
@@ -517,13 +305,15 @@ static bool_T __MyTreeCB(fsdbTreeCBType cb_type,
 }
 
 static void 
-__DumpScope(fsdbTreeCBDataScope* scope)
+__DumpScope(fsdbTreeCBDataScope* scope, char* match_path)
 {
     str_T type;
 
     switch (scope->type) {
     case FSDB_ST_VCD_MODULE:
 	type = (str_T) "module"; 
+    AddPath(match_path, scope->name);
+    fprintf(stderr, "<Debug> path:%s \n", match_path);
 	break;
 
     case FSDB_ST_VCD_TASK:
@@ -543,7 +333,7 @@ __DumpScope(fsdbTreeCBDataScope* scope)
 	break;
 
     default:
-	type = "unknown_scope_type";
+	type = (str_T) "unknown_scope_type";
 	break;
     }
 
@@ -552,11 +342,15 @@ __DumpScope(fsdbTreeCBDataScope* scope)
 }
 
 static void 
-__DumpVar(fsdbTreeCBDataVar *var)
+__DumpVar(fsdbTreeCBDataVar* var, SIGNAL_MAP signal_map)
 {
     str_T type;
     str_T bpb;
     str_T direct;
+
+    map<string,sigInfo>::iterator t;
+
+    bool type_matched = FALSE;
 
     switch(var->bytes_per_bit) {
     case FSDB_BYTES_PER_BIT_1B:
@@ -583,10 +377,17 @@ __DumpVar(fsdbTreeCBDataVar *var)
     switch (var->direction) {
     case FSDB_VD_INPUT:
     direct = (str_T) "input";
+    type_matched = TRUE;
     break;
 
     case FSDB_VD_OUTPUT:
     direct = (str_T) "output";
+    type_matched = TRUE;
+    break;
+    
+    case FSDB_VD_INOUT:
+    direct = (str_T) "output";
+    type_matched = TRUE;
     break;
     
     default:
@@ -700,6 +501,17 @@ __DumpVar(fsdbTreeCBDataVar *var)
 	break;
     }
 
+    if(type_matched)
+    {
+        t = signal_map[matched_path].find(var->name);
+        if(t != signal_map[matched_path].end())
+        {
+            signal_map[matched_path][var->name].idcode = (int)var->u.idcode;
+            printf("find matched var :%s -> %u \n",
+            var->name, (unsigned int)var->u.idcode);
+        }
+    }
+
     fprintf(stderr,
 	"<Var>  name:%s  l:%u  r:%u  type:%s  ",
 	var->name, var->lbitnum, var->rbitnum, type);
@@ -708,5 +520,5 @@ __DumpVar(fsdbTreeCBDataVar *var)
     var->direction,direct);
     fprintf(stderr,
 	"idcode:%u  dtidcode:%u  bpb:%s\n",
-	var->u.idcode, var->dtidcode, bpb);
+	(unsigned int)var->u.idcode, (unsigned int)var->dtidcode, bpb);
 }

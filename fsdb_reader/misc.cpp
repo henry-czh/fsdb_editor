@@ -1,27 +1,11 @@
-#include<map>
-#include<stdio.h>
-#include<iostream>
-#include<string.h>
-#include<string>
-#include<fstream>
-using namespace std;
 
-#define MAX_KV 64
-
-typedef struct sigInfo_t
-{
-	char name[MAX_KV];
-	int idcode;
-} sigInfo;
-
-typedef map<string,map<string,sigInfo>> SIGNAL_MAP;
+#include "misc.h"
 
 SIGNAL_MAP
 read_config()
 {
-    int max_line = 1024;
-    char line[max_line];
-    char key[max_line];
+    char line[MAX_LINE];
+    char key[MAX_LINE];
     char k[MAX_KV];
     char v[MAX_KV];
     SIGNAL_MAP cfgs;
@@ -29,7 +13,7 @@ read_config()
     FILE *fp = NULL;
     fp = fopen("config", "r");
 
-    while(fgets(line, max_line, fp)) {
+    while(fgets(line, MAX_LINE, fp)) {
         if (line[0] != ' ') {
             sscanf(line, "%s", key);
             //printf("key[%s]\n", key);
@@ -40,8 +24,9 @@ read_config()
             sscanf(line, "%s %s", k, v);
             //printf("k[%s] v[%s]\n", k, v);
 	    sigInfo si;
-	    strcpy(si.name, v);
-            cfgs[key][k] = si;
+        // 以type为name，实际信号名为key
+	    strcpy(si.name, k);
+            cfgs[key][v] = si;
 
         }
     }
@@ -59,10 +44,10 @@ path_compare(string a_str, string b_str)
 	return b_str == a_str;
 }
 
-string
-path_push(string base_str, string new_str)
+void
+path_push(string& base_str, string new_str)
 {
-	return base_str + "." + new_str;
+	base_str = base_str + "." + new_str;
 }
 
 string
@@ -74,6 +59,32 @@ path_pop(string base_str)
 	return base_str.erase(pos,base_str.size());
 }
 
+void
+AddPath(char* str, char* s)
+{
+    int l = strlen(str);
+    if(l)
+    {
+        str[l] = '.';
+        strcpy(str + l + 1, s);
+    }
+    else
+    {
+        strcpy(str, s);
+    }
+}
+
+void
+DelPath(char* str)
+{
+    char* p = strrchr(str, '.');
+    if(p)
+        *p = 0;
+    else
+        str[0] = 0;
+}
+
+/*
 int
 main(int argc, char *argv[])
 {
@@ -100,4 +111,5 @@ main(int argc, char *argv[])
 	bool match = path_compare(cmp_str,hdl_path);
 	cout<<match<< "\n";
 }
+*/
 
