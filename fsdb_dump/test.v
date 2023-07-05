@@ -64,8 +64,8 @@ reg [7:0] b_dut;
 
 always @(posedge clk or negedge rstn)
 	if(~rstn)
-		b_dut <= 8'h00;
+		b_dut0 <= 8'h00;
 	else
-		b_dut <= a_dut;
+		b_dut0 <= a_dut0;
 
 endmodule

@@ -13,6 +13,7 @@
 
 
 #include "fsdb_reader.h"
+#include <assert.h>
 
 void
 loadSignals(ffrObject* fsdb_obj, SIGNAL_MAP signal_map)
@@ -29,18 +30,26 @@ loadSignals(ffrObject* fsdb_obj, SIGNAL_MAP signal_map)
     map<string,map<string,sigInfo>>::iterator t;
     map<string, sigInfo>::iterator signal_it;
     map<string, int> chi_map;
-    fsdbVarIdcode chi_sig_arr[CHI_SIG_NUM];
 
+    int i = 0;
+
+    fprintf(stderr, "马上进入map遍历.\n");
     // 遍历整个配置map项
     for(t = signal_map.begin(); t != signal_map.end(); t++)
     {
         //如果instance对应的map不为空，则为抓取到了对应信号的idcode
-        if(t->second.size())
+        if(t->second["info"].idcode == 20230706)
         {
-            int i = 0;
+            fprintf(stderr, "正在进行遍历的层次是: %s.\n", t->first.c_str());
+            t->second.erase("info");
             for(signal_it = t->second.begin(); signal_it != t->second.end(); signal_it++)
             {
+                // 判断是否有未找到idcode的signal
+                assert(signal_it->second.idcode);
+
                 fsdb_obj->ffrAddToSignalList(signal_it->second.idcode);
+                fprintf(stderr, "add signal %s, idcode %u to list.\n", signal_it->first.c_str(), (unsigned int)signal_it->second.idcode);
+
                 chi_map[signal_it->second.name] = signal_it->second.idcode;
                 chi_sig_arr[i] = signal_it->second.idcode;
                 i++;
@@ -54,6 +63,11 @@ loadSignals(ffrObject* fsdb_obj, SIGNAL_MAP signal_map)
     //
     fsdb_obj->ffrLoadSignals();
 
+}
+
+void
+DumpData(ffrObject* fsdb_obj, FILE* dump_file)
+{
     // 设置一个以time-base的value change抓取
     ffrTimeBasedVCTrvsHdl tb_vc_trvs_hdl;
     byte_T *vc_ptr;
@@ -76,6 +90,34 @@ loadSignals(ffrObject* fsdb_obj, SIGNAL_MAP signal_map)
             time.hltag.H, time.hltag.L, (unsigned int)var_idcode, seq_num);
         PrintAsVerilog(vc_ptr, 1);
     }
+
+    //
+    // Iterate until no more value change
+    //
+    // The order of the value change at the same time step are
+    // returned according to their sequence number. If sequence
+    // number is not turned on, the order will be undetermined.
+    //
+    while(FSDB_RC_SUCCESS == tb_vc_trvs_hdl->ffrGotoNextVC()) {
+        tb_vc_trvs_hdl->ffrGetVarIdcode(&var_idcode);
+        tb_vc_trvs_hdl->ffrGetXTag(&time);
+        tb_vc_trvs_hdl->ffrGetSeqNum(&seq_num);
+        tb_vc_trvs_hdl->ffrGetVC(&vc_ptr);
+        fprintf(stdout, "(%u %u) => var(%u): seq_num: %u val: ",
+        time.hltag.H, time.hltag.L, (unsigned int)var_idcode, seq_num);
+        PrintAsVerilog(vc_ptr, 1);
+    }
+    //
+    // Remember to call ffrFree() to free the memory occupied by
+    // this time-based value change trvs hdl
+    //
+    tb_vc_trvs_hdl->ffrFree();
+
+    //
+    // Remember to call ffrUnloadSignals() to unload value change
+    // memory.
+    //
+    fsdb_obj->ffrUnloadSignals();
 
 }
 
@@ -254,7 +296,7 @@ bool_T __MyTreeCB(fsdbTreeCBType cb_type,
 	break;
 
     case FSDB_TREE_CBT_VAR:
-	__DumpVar((fsdbTreeCBDataVar*)tree_cb_data, *((SIGNAL_MAP*)client_data));
+	__DumpVar((fsdbTreeCBDataVar*)tree_cb_data, (SIGNAL_MAP*)client_data);
 	break;
 
     case FSDB_TREE_CBT_UPSCOPE:
@@ -342,13 +384,15 @@ __DumpScope(fsdbTreeCBDataScope* scope, char* match_path)
 }
 
 static void 
-__DumpVar(fsdbTreeCBDataVar* var, SIGNAL_MAP signal_map)
+__DumpVar(fsdbTreeCBDataVar* var, SIGNAL_MAP* signal_map)
 {
     str_T type;
     str_T bpb;
     str_T direct;
+    char* info = (char*)"info";
 
     map<string,sigInfo>::iterator t;
+    SIGNAL_MAP signal_map_local = *signal_map;
 
     bool type_matched = FALSE;
 
@@ -386,7 +430,7 @@ __DumpVar(fsdbTreeCBDataVar* var, SIGNAL_MAP signal_map)
     break;
     
     case FSDB_VD_INOUT:
-    direct = (str_T) "output";
+    direct = (str_T) "inout";
     type_matched = TRUE;
     break;
     
@@ -503,13 +547,19 @@ __DumpVar(fsdbTreeCBDataVar* var, SIGNAL_MAP signal_map)
 
     if(type_matched)
     {
-        t = signal_map[matched_path].find(var->name);
-        if(t != signal_map[matched_path].end())
+        t = signal_map_local[matched_path].find(var->name);
+        if(t != signal_map_local[matched_path].end())
         {
-            signal_map[matched_path][var->name].idcode = (int)var->u.idcode;
-            printf("find matched var :%s -> %u \n",
-            var->name, (unsigned int)var->u.idcode);
+            signal_map_local[matched_path][info].idcode = 20230706;
+            signal_map_local[matched_path][var->name].idcode = (int)var->u.idcode;
+            //printf("找到匹配的信号:%s -> %u \n",
+            //var->name, (unsigned int)var->u.idcode);
+            printf("找到匹配的信号:%s -> %u \n",
+            var->name, (unsigned int)signal_map_local[matched_path][var->name].idcode);
         }
+
+        *signal_map = signal_map_local;
+
     }
 
     fprintf(stderr,

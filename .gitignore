@@ -1,4 +1,5 @@
 fsdb_reader/*.o
 fsdb_reader/*.out
-fsdb_reader/fsdb_read
+fsdb_reader/fsdb_reader
 fsdb_reader/read_verilog
+fsdb_reader/chi_analyzer.dat

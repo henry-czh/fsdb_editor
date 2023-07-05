@@ -5,28 +5,33 @@ SIGNAL_MAP
 read_config()
 {
     char line[MAX_LINE];
-    char key[MAX_LINE];
+    char scope[MAX_LINE];
+    char protocol[MAX_KV];
     char k[MAX_KV];
     char v[MAX_KV];
     SIGNAL_MAP cfgs;
+    sigInfo si;
 
     FILE *fp = NULL;
     fp = fopen("config", "r");
 
     while(fgets(line, MAX_LINE, fp)) {
         if (line[0] != ' ') {
-            sscanf(line, "%s", key);
-            //printf("key[%s]\n", key);
+            *strchr(line, ':') = ' ';
+            sscanf(line, "%s %s", scope, protocol);
             map<string, sigInfo> cfg;
-            cfgs[key] = cfg;
+	        strcpy(si.name, protocol);
+	        si.idcode = 0;
+            cfg["info"] = si;
+            cfgs[scope] = cfg;
         } else {
             *strchr(line, ':') = ' ';
             sscanf(line, "%s %s", k, v);
             //printf("k[%s] v[%s]\n", k, v);
-	    sigInfo si;
-        // 以type为name，实际信号名为key
-	    strcpy(si.name, k);
-            cfgs[key][v] = si;
+	        si = {.idcode = 0};
+            // 以type为name，实际信号名为key
+	        strcpy(si.name, k);
+            cfgs[scope][v] = si;
 
         }
     }

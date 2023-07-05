@@ -13,7 +13,7 @@ using namespace std;
 #define MAX_KV 64
 #define MAX_LINE 1024
 
-#define CHI_SIG_NUM 24
+//#define CHI_SIG_NUM 2
 
 typedef struct sigInfo_t
 {

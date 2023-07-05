@@ -120,6 +120,11 @@ main(int argc, char *argv[])
     * 变化到内存中。
     */
     loadSignals(fsdb_obj, signal_map);
+
+    FILE *chi_dump_file = NULL;
+    chi_dump_file = fopen("chi_analyzer.dat", "wb+");
+
+    DumpData(fsdb_obj, chi_dump_file);
 /* czh  
 
     //
