@@ -28,10 +28,6 @@ loadSignals(ffrObject* fsdb_obj, SIGNAL_MAP signal_map)
     // 
 
     map<string,map<string,sigInfo>>::iterator t;
-    map<string, sigInfo>::iterator signal_it;
-    map<string, int> chi_map;
-
-    int i = 0;
 
     fprintf(stderr, "马上进入map遍历.\n");
     // 遍历整个配置map项
@@ -40,21 +36,41 @@ loadSignals(ffrObject* fsdb_obj, SIGNAL_MAP signal_map)
         //如果instance对应的map不为空，则为抓取到了对应信号的idcode
         if(t->second["info"].idcode == 20230706)
         {
-            fprintf(stderr, "正在进行遍历的层次是: %s.\n", t->first.c_str());
-            t->second.erase("info");
-            for(signal_it = t->second.begin(); signal_it != t->second.end(); signal_it++)
+            if(strcmp(t->second["info"].name,(char*)"chi") == 0)
             {
-                // 判断是否有未找到idcode的signal
-                assert(signal_it->second.idcode);
-
-                fsdb_obj->ffrAddToSignalList(signal_it->second.idcode);
-                fprintf(stderr, "add signal %s, idcode %u to list.\n", signal_it->first.c_str(), (unsigned int)signal_it->second.idcode);
-
-                chi_map[signal_it->second.name] = signal_it->second.idcode;
-                chi_sig_arr[i] = signal_it->second.idcode;
-                i++;
+                fprintf(stderr, "正在遍历的是CHI协议, 层次是: %s.\n", t->first.c_str());
+                dumpCHIData(fsdb_obj, t->second);
             }
         }
+    }
+
+}
+
+void
+dumpCHIData(ffrObject* fsdb_obj, map<string,sigInfo> chi_sig_map)
+{
+    map<string, sigInfo>::iterator signal_it;
+    map<int, sigInfo> chi_map;
+    sigInfo sig_info;
+    fsdbVarIdcode chi_sig_arr[CHI_SIG_NUM];
+    int i = 0;
+
+
+    chi_sig_map.erase("info");
+    for(signal_it = chi_sig_map.begin(); signal_it != chi_sig_map.end(); signal_it++)
+    {
+        // 判断是否有未找到idcode的signal
+        assert(signal_it->second.idcode);
+
+        fsdb_obj->ffrAddToSignalList(signal_it->second.idcode);
+        //fprintf(stderr, "add signal %s, idcode %u to list.\n", signal_it->first.c_str(), (unsigned int)signal_it->second.idcode);
+
+        strcpy(sig_info.name,signal_it->second.name);
+        sig_info.lbitnum = signal_it->second.lbitnum;
+
+        chi_map[signal_it->second.idcode] = sig_info;
+        chi_sig_arr[i] = signal_it->second.idcode;
+        i++;
     }
 
     //
@@ -63,17 +79,34 @@ loadSignals(ffrObject* fsdb_obj, SIGNAL_MAP signal_map)
     //
     fsdb_obj->ffrLoadSignals();
 
-}
-
-void
-DumpData(ffrObject* fsdb_obj, FILE* dump_file)
-{
     // 设置一个以time-base的value change抓取
     ffrTimeBasedVCTrvsHdl tb_vc_trvs_hdl;
     byte_T *vc_ptr;
     fsdbVarIdcode var_idcode;
     fsdbXTag time;
     fsdbSeqNum seq_num;
+    CHIChannel channel = TXREQ;
+
+	unsigned int time_dec[2];
+
+    int txreq_len = 0;
+    int txrsp_len = 0;
+    int txdat_len = 0;
+    int rxrsp_len = 0;
+    int rxdat_len = 0;
+    int rxsnp_len = 0;
+
+
+    FILE *chi_dump_file = NULL;
+    chi_dump_file = fopen("chi_analyzer.dat", "wb+");
+    // 定义chi数据暂存空间
+    chi_sig_t chi_sig_record = {.rstn = 0,
+                                .txreqflitv = 0,
+                                .txrspflitv = 0,
+                                .txdatflitv = 0,
+                                .rxrspflitv = 0,
+                                .rxdatflitv = 0,
+                                .rxsnpflitv = 0};
 
     tb_vc_trvs_hdl = fsdb_obj->ffrCreateTimeBasedVCTrvsHdl(CHI_SIG_NUM,chi_sig_arr);
 
@@ -82,14 +115,13 @@ DumpData(ffrObject* fsdb_obj, FILE* dump_file)
         fprintf(stderr, "Fail to create time-based value change trvs hdl!\n");
     }
 
-    if (FSDB_RC_SUCCESS == tb_vc_trvs_hdl->ffrGetVC(&vc_ptr)) {
-        tb_vc_trvs_hdl->ffrGetVarIdcode(&var_idcode);
-        tb_vc_trvs_hdl->ffrGetXTag(&time);
-        tb_vc_trvs_hdl->ffrGetSeqNum(&seq_num);
-        fprintf(stdout, "(%u %u) => var(%u): seq_num: %u val: ",
-            time.hltag.H, time.hltag.L, (unsigned int)var_idcode, seq_num);
-        PrintAsVerilog(vc_ptr, 1);
-    }
+    //if (FSDB_RC_SUCCESS == tb_vc_trvs_hdl->ffrGetVC(&vc_ptr)) {
+    //    tb_vc_trvs_hdl->ffrGetVarIdcode(&var_idcode);
+    //    tb_vc_trvs_hdl->ffrGetXTag(&time);
+    //    tb_vc_trvs_hdl->ffrGetSeqNum(&seq_num);
+
+    //    writeCHIdat(chi_map, vc_ptr, time, var_idcode, &chi_sig_record);
+    //}
 
     //
     // Iterate until no more value change
@@ -103,9 +135,119 @@ DumpData(ffrObject* fsdb_obj, FILE* dump_file)
         tb_vc_trvs_hdl->ffrGetXTag(&time);
         tb_vc_trvs_hdl->ffrGetSeqNum(&seq_num);
         tb_vc_trvs_hdl->ffrGetVC(&vc_ptr);
-        fprintf(stdout, "(%u %u) => var(%u): seq_num: %u val: ",
-        time.hltag.H, time.hltag.L, (unsigned int)var_idcode, seq_num);
-        PrintAsVerilog(vc_ptr, 1);
+        
+		time_dec[1] = time.hltag.H;
+		time_dec[0] = time.hltag.L;
+
+        if(memcmp(chi_map[var_idcode].name, (char*)"clk", strlen("clk")) == 0) 
+        {
+            if(*vc_ptr == 0) 
+            {
+                fprintf(stdout, "@posedge clk; (%u %u) \n", time.hltag.H, time.hltag.L);
+
+                if(chi_sig_record.txreqflitv)
+                {
+                    fprintf(stdout, "store found txreqflit : %x %x %x %x\n",
+					                                         chi_sig_record.txreqflit[3],
+					                                         chi_sig_record.txreqflit[2],
+					                                         chi_sig_record.txreqflit[1],
+					                                         chi_sig_record.txreqflit[0]
+															 );
+
+
+                    channel = TXREQ;
+                    fwrite(&time_dec, 2 * sizeof(unsigned int), 1, chi_dump_file);
+                    fwrite(&channel, sizeof(unsigned int), 1, chi_dump_file);
+                    fwrite(&chi_sig_record.txreqflit, txreq_len * sizeof(byte_T), 1, chi_dump_file);
+                }
+            }
+        }
+
+        if(memcmp(chi_map[var_idcode].name, (char*)"rstn", strlen("rstn")) == 0)
+        {
+            //fprintf(stdout, "vc size: %ld\n", sizeof(*vc_ptr));
+            chi_sig_record.rstn = *vc_ptr;
+            fprintf(stdout, "(%u %u) => var(%u): val: ",
+                time.hltag.H, time.hltag.L, (unsigned int)var_idcode);
+            PrintAsVerilog(vc_ptr, 1);
+        }
+
+
+        if(memcmp(chi_map[var_idcode].name, (char*)"txreqflitpend", strlen("txreqflitpend")) == 0)
+        {
+            fprintf(stdout, "(%u %u) => var(%u): val: ",
+                time.hltag.H, time.hltag.L, (unsigned int)var_idcode);
+            PrintAsVerilog(vc_ptr, 1);
+        }
+        else if(memcmp(chi_map[var_idcode].name, (char*)"txreqflitv", strlen("txreqflitv")) == 0)
+        {
+            chi_sig_record.txreqflitv = *vc_ptr;
+            fprintf(stdout, "(%u %u) => var(%u): val: ",
+                time.hltag.H, time.hltag.L, (unsigned int)var_idcode);
+            PrintAsVerilog(vc_ptr, 1);
+        }
+        else if(memcmp(chi_map[var_idcode].name, (char*)"txreqflit", strlen("txreqflit")) == 0)
+        {
+            fprintf(stdout, "(%u %u) => var(%u): val: \n",
+                time.hltag.H, time.hltag.L, (unsigned int)var_idcode);
+            PrintAsVerilogHex(vc_ptr, var_idcode, chi_map, chi_sig_record.txreqflit);
+
+            if((chi_map[var_idcode].lbitnum+1) % 8 == 0)
+                txreq_len = (chi_map[var_idcode].lbitnum+1)/8;
+            else
+                txreq_len = (chi_map[var_idcode].lbitnum+1)/8 + 1;
+        }
+
+        //if(strcmp(chi_map[var_idcode].name, (char*)"txrspflitv") == 0)
+        //    chi_sig_record.txrspflitv = *vc_ptr;
+
+        //if(strcmp(chi_map[var_idcode].name, (char*)"txrspflit") == 0)
+        //{
+        //    for(i=0; i<chi_map[var_idcode].lbitnum + 1; i++) {
+        //        chi_sig_record.txrspflit[i] = *(vc_ptr+i);
+        //    }
+        //}
+
+        //if(strcmp(chi_map[var_idcode].name, (char*)"txdatflitv") == 0)
+        //    chi_sig_record.txdatflitv = *vc_ptr;
+
+        //if(strcmp(chi_map[var_idcode].name, (char*)"txdatflit") == 0)
+        //{
+        //    for(i=0; i<chi_map[var_idcode].lbitnum + 1; i++) {
+        //        chi_sig_record.txdatflit[i] = *(vc_ptr+i);
+        //    }
+        //}
+
+        //if(strcmp(chi_map[var_idcode].name, (char*)"rxrsplitv") == 0)
+        //    chi_sig_record.rxrspflitv = *vc_ptr;
+
+        //if(strcmp(chi_map[var_idcode].name, (char*)"rxrspflit") == 0)
+        //{
+        //    for(i=0; i<chi_map[var_idcode].lbitnum + 1; i++) {
+        //        chi_sig_record.rxrspflit[i] = *(vc_ptr+i);
+        //    }
+        //}
+
+        //if(strcmp(chi_map[var_idcode].name ,(char*)"rxdatflitv") == 0)
+        //    chi_sig_record.rxdatflitv = *vc_ptr;
+
+        //if(strcmp(chi_map[var_idcode].name, (char*)"rxdatflit") == 0)
+        //{
+        //    for(i=0; i<chi_map[var_idcode].lbitnum + 1; i++) {
+        //        chi_sig_record.rxdatflit[i] = *(vc_ptr+i);
+        //    }
+        //}
+
+        //if(strcmp(chi_map[var_idcode].name, (char*)"rxsnpflitv") == 0)
+        //    chi_sig_record.rxsnpflitv = *vc_ptr;
+
+        //if(strcmp(chi_map[var_idcode].name, (char*)"rxsnpflit") == 0)
+        //{
+        //    for(i=0; i<chi_map[var_idcode].lbitnum + 1; i++) {
+        //        chi_sig_record.rxsnpflit[i] = *(vc_ptr+i);
+        //    }
+        //}
+
     }
     //
     // Remember to call ffrFree() to free the memory occupied by
@@ -122,6 +264,118 @@ DumpData(ffrObject* fsdb_obj, FILE* dump_file)
 }
 
 /*
+** Print as Verilog standard values in hex format.
+** x0z1-z10z 0x0x-1011...
+*/
+void
+PrintAsVerilogHex(byte_T *ptr, fsdbVarIdcode var_idcode, map<int, sigInfo> chi_map, byte_T* flit)
+{
+    const int VALUES_IN_A_SEG = 8;
+    const int VALUES_DUMPED_IN_A_LINE = 40;
+    int i, j, end_idx;
+    byte_T a_byte;
+    char val_tbl[] = "01xz";
+    byte_T hex_byte;
+    byte_T hex_byte_h;
+
+    uint_T size;
+    size = chi_map[var_idcode].lbitnum + 1;
+
+    int high_null_bit;
+    if(size % 8)
+        high_null_bit = 8 - size % 8;
+    else
+        high_null_bit = 0;
+
+    end_idx = (size + high_null_bit)/8;
+
+    for(i = 0; i < size + high_null_bit; i++) {
+        //未对齐，在高位补0
+        if(i < high_null_bit)
+        {
+            a_byte = 0;
+        }
+        else {
+            a_byte = *(ptr + i - high_null_bit);
+        }
+
+        j = i % 4;        
+
+        if (a_byte < 2)
+            if(j == 0)
+                hex_byte = a_byte << 3;
+            else
+            {
+                hex_byte = hex_byte + (a_byte << (3 - j));
+            }
+        else {
+            //fprintf(stderr, "found unkonw sigal ?\n");
+            hex_byte = 0;
+        }
+
+        if (3 == (i % VALUES_IN_A_SEG) && (i < size+high_null_bit-1))
+        {
+            //fprintf(stdout, "%x", hex_byte);
+            //fprintf(stdout, "-");
+            hex_byte_h = hex_byte << 4;
+        }
+        
+        if ((VALUES_IN_A_SEG - 1) == (i % VALUES_IN_A_SEG)) {
+            fprintf(stdout, "%x", hex_byte+hex_byte_h);
+
+            flit[end_idx - i/VALUES_IN_A_SEG - 1] = hex_byte + hex_byte_h;
+
+            if ((VALUES_DUMPED_IN_A_LINE - 1) ==
+                (i % VALUES_DUMPED_IN_A_LINE)) {
+                fprintf(stdout, "\n");
+            }
+            else {
+                fprintf(stdout, " ");
+            }
+        }
+    }
+
+    if ((VALUES_DUMPED_IN_A_LINE - 1) != (i %
+        VALUES_DUMPED_IN_A_LINE)) {
+        fprintf(stdout, "\n");
+    }
+}
+
+/*
+void
+writeCHIdat(map<int, string> chi_map, byte_T* vc_ptr, fsdbXTag time, fsdbVarIdcode var_idcode, chi_sig_t* chi_sig_value)
+{
+    if(chi_map[var_idcode].compare("rstn") == 0)
+    {
+        if(*vc_ptr == 1)
+        {
+            fprintf(stdout, "vc size: %ld\n", sizeof(*vc_ptr));
+            chi_sig_value->rstn = 1;
+            fprintf(stdout, "(%u %u) => var(%u): val: ",
+                time.hltag.H, time.hltag.L, (unsigned int)var_idcode);
+            PrintAsVerilog(vc_ptr, 1);
+        }
+    }
+    if(chi_sig_value->rstn) 
+    {
+        if(chi_sig_value->txreqflitv)
+            fwrite(chi_sig_value->txreqflit, 6 * sizeof(long long), 1, );
+    }
+    //if(chi_map[var_idcode].compare("txreqflit") == 0)
+    //{
+    //    fprintf(stdout, "(%u %u) => var(%u): val: \n",
+    //        time.hltag.H, time.hltag.L, (unsigned int)var_idcode);
+    //    PrintAsVerilog(vc_ptr, 127);
+    //}
+    //else if(chi_map[var_idcode].compare("txreqflitv") == 0)
+    //{
+    //    fprintf(stdout, "(%u %u) => var(%u): val: ",
+    //        time.hltag.H, time.hltag.L, (unsigned int)var_idcode);
+    //    PrintAsVerilog(vc_ptr, 1);
+    //}
+}*/
+
+/*
 ** Print as Verilog standard values.
 ** x0z1-z10z 0x0x-1011...
 */
@@ -134,14 +388,25 @@ PrintAsVerilog(byte_T *ptr, uint_T size)
     byte_T a_byte;
     char val_tbl[] = "01xz";
 
-    for(i = 0; i < size; i++) {
-        a_byte = *(ptr+i);
+    int high_null_bit;
+    high_null_bit = 4 - size % 4;
+
+    for(i = 0; i < size + high_null_bit; i++) {
+        //未对齐，在高位补0
+        if(i < high_null_bit)
+        {
+            a_byte = 0;
+        }
+        else {
+            a_byte = *(ptr + i - high_null_bit);
+        }
+        //a_byte = *(ptr+i);
         if (a_byte < 4)
             fprintf(stdout, "%c", val_tbl[a_byte]);
         else
             fprintf(stdout, "?");
 
-        if (3 == (i % VALUES_IN_A_SEG) && (i < size-1))
+        if (3 == (i % VALUES_IN_A_SEG) && (i < size+high_null_bit-1))
             fprintf(stdout, "-");
         
         if ((VALUES_IN_A_SEG - 1) == (i % VALUES_IN_A_SEG)) {
@@ -547,15 +812,18 @@ __DumpVar(fsdbTreeCBDataVar* var, SIGNAL_MAP* signal_map)
 
     if(type_matched)
     {
-        t = signal_map_local[matched_path].find(var->name);
+        regex pattern("\[[0-9]+:[0-9]\\]");
+        string pure_sig_name = regex_replace(var->name, pattern, "");
+
+        t = signal_map_local[matched_path].find(pure_sig_name);
         if(t != signal_map_local[matched_path].end())
         {
             signal_map_local[matched_path][info].idcode = 20230706;
-            signal_map_local[matched_path][var->name].idcode = (int)var->u.idcode;
-            //printf("找到匹配的信号:%s -> %u \n",
-            //var->name, (unsigned int)var->u.idcode);
+            signal_map_local[matched_path][pure_sig_name].idcode = (int)var->u.idcode;
+            signal_map_local[matched_path][pure_sig_name].lbitnum= (int)var->lbitnum;
+
             printf("找到匹配的信号:%s -> %u \n",
-            var->name, (unsigned int)signal_map_local[matched_path][var->name].idcode);
+            pure_sig_name.c_str(), (unsigned int)signal_map_local[matched_path][pure_sig_name].idcode);
         }
 
         *signal_map = signal_map_local;

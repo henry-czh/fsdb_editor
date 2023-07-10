@@ -1,3 +1,24 @@
 test.dut0: ram
  a: a_dut0
  b: b_dut0
+chip_tb.skt0.top.u_apu_0: chi
+ clk: CLK_NOC
+ rstn: RST_NOC_n
+ txreqflitv: TXREQFLITV
+ txreqflitpend: TXREQFLITPEND
+ txreqflit: TXREQFLIT
+ txrspflitv: TXRSPFLITV
+ txrspflitpend: TXRSPFLITPEND
+ txrspflit: TXRSPFLIT
+ rxrspflitv: RXRSPFLITV
+ rxrspflitpend: RXRSPFLITPEND
+ rxrspflit: RXRSPFLIT
+ txdatflitv: TXDATFLITV
+ txdatflitpend: TXDATFLITPEND
+ txdatflit: TXDATFLIT
+ rxdatflitv: RXDATFLITV
+ rxdatflitpend: RXDATFLITPEND
+ rxdatflit: RXDATFLIT
+ rxsnpflitv: RXSNPFLITV
+ rxsnpflitpend: RXSNPFLITPEND
+ rxsnpflit: RXSNPFLIT

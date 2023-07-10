@@ -7,8 +7,8 @@ read_config()
     char line[MAX_LINE];
     char scope[MAX_LINE];
     char protocol[MAX_KV];
-    char k[MAX_KV];
-    char v[MAX_KV];
+    char sigType[MAX_KV];
+    char sigName[MAX_KV];
     SIGNAL_MAP cfgs;
     sigInfo si;
 
@@ -26,20 +26,18 @@ read_config()
             cfgs[scope] = cfg;
         } else {
             *strchr(line, ':') = ' ';
-            sscanf(line, "%s %s", k, v);
+            sscanf(line, "%s %s", sigType, sigName);
             //printf("k[%s] v[%s]\n", k, v);
 	        si = {.idcode = 0};
             // 以type为name，实际信号名为key
-	        strcpy(si.name, k);
-            cfgs[scope][v] = si;
+	        strcpy(si.name, sigType);
+            cfgs[scope][sigName] = si;
 
         }
     }
 
     fclose(fp);
 
-    printf("\ncfgs[chip_tb.skt1.top.apu0][psel] = %s\n", 
-	        cfgs["chip_tb.skt1.top.apu0"]["psel"].name);
     return cfgs;
 }
 

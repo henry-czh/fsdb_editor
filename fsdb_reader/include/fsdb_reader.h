@@ -18,6 +18,7 @@
 #include "ffrAPI.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <regex>
 #include "misc.h"
 
 #ifndef FALSE
@@ -28,9 +29,43 @@
 #define TRUE	1
 #endif
 
-const unsigned int CHI_SIG_NUM = 2;
+const unsigned int CHI_SIG_NUM = 20;
 
-fsdbVarIdcode chi_sig_arr[CHI_SIG_NUM];
+typedef struct
+{
+    int rstn;
+    int txreqflitpend_pre;
+    int txreqflitpend;
+    int txreqflitv;
+    byte_T txreqflit[20];
+
+    int txrspflitpend_pre;
+    int txrspflitpend;
+    int txrspflitv;
+    byte_T txrspflit[20];
+
+    int txdatflitpend_pre;
+    int txdatflitpend;
+    int txdatflitv;
+    byte_T txdatflit[75];
+
+    int rxrspflitpend_pre;
+    int rxrspflitpend;
+    int rxrspflitv;
+    byte_T rxrspflit[20];
+
+    int rxdatflitpend_pre;
+    int rxdatflitpend;
+    int rxdatflitv;
+    byte_T rxdatflit[75];
+
+    int rxsnpflitpend_pre;
+    int rxsnpflitpend;
+    int rxsnpflitv;
+    byte_T rxsnpflit[20];
+} chi_sig_t;
+
+enum CHIChannel {TXREQ, TXRSP, TXDAT, RXRSP, RXDAT, RXSNP};
 
 //
 // The tree callback function, it's used to traverse the design 
@@ -63,9 +98,15 @@ void
 loadSignals(ffrObject* fsdb_obj, SIGNAL_MAP signal_map);
 
 void
-DumpData(ffrObject* fsdb_obj, FILE* dump_file);
+dumpCHIData(ffrObject* fsdb_obj, map<string,sigInfo> chi_sig_map);
+
+void
+writeCHIdat(map<int, string>, byte_T*, fsdbXTag, fsdbVarIdcode, chi_sig_t*);
 
 static void
 PrintAsVerilog(byte_T *ptr, uint_T size);
+
+static void
+PrintAsVerilogHex(byte_T *ptr, fsdbVarIdcode, map<int, sigInfo>, byte_T*);
 
 #endif

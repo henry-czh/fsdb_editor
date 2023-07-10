@@ -3,3 +3,6 @@ fsdb_reader/*.out
 fsdb_reader/fsdb_reader
 fsdb_reader/read_verilog
 fsdb_reader/chi_analyzer.dat
+fsdb_reader/chi_analyzer.sqlite
+fsdb_reader/extractSignal.fsdb
+fsdb_reader/extractSignal2.fsdb

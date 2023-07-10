@@ -19,6 +19,7 @@ typedef struct sigInfo_t
 {
 	char name[MAX_KV];
 	int idcode;
+	int lbitnum;
 } sigInfo;
 
 typedef map<string,map<string,sigInfo>> SIGNAL_MAP;
