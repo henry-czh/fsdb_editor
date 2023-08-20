@@ -85,7 +85,15 @@ dumpCHIData(ffrObject* fsdb_obj, map<string,sigInfo> chi_sig_map)
     fsdbVarIdcode var_idcode;
     fsdbXTag time;
     fsdbSeqNum seq_num;
-    CHIChannel channel = TXREQ;
+
+    Channel txrsp_ch = TXRSP;
+    Channel txdat_ch = TXDAT;
+    Channel rxrsp_ch = RXRSP;
+    Channel rxdat_ch = RXDAT;
+    Channel rxsnp_ch = RXSNP;
+    Channel req_ch = TXREQ;
+    //uint32_t req_ch = 0;
+    //uint32_t rxrsp_ch = 3;
 
 	unsigned int time_dec[2];
 
@@ -139,56 +147,90 @@ dumpCHIData(ffrObject* fsdb_obj, map<string,sigInfo> chi_sig_map)
 		time_dec[1] = time.hltag.H;
 		time_dec[0] = time.hltag.L;
 
+        //fprintf(stdout, "(%u %u) => var(%u): val: ",
+        //    time.hltag.H, time.hltag.L, (unsigned int)var_idcode);
+        //PrintAsVerilog(vc_ptr, 1);
+
+        if(memcmp(chi_map[var_idcode].name, (char*)"rstn", strlen("rstn")) == 0)
+        {
+            chi_sig_record.rstn = *vc_ptr;
+        }
+
         if(memcmp(chi_map[var_idcode].name, (char*)"clk", strlen("clk")) == 0) 
         {
             if(*vc_ptr == 0) 
             {
-                fprintf(stdout, "@posedge clk; (%u %u) \n", time.hltag.H, time.hltag.L);
-
                 if(chi_sig_record.txreqflitv)
                 {
-                    fprintf(stdout, "store found txreqflit : %x %x %x %x\n",
-					                                         chi_sig_record.txreqflit[3],
-					                                         chi_sig_record.txreqflit[2],
-					                                         chi_sig_record.txreqflit[1],
-					                                         chi_sig_record.txreqflit[0]
-															 );
+                    fprintf(stdout, "@posedge clk; (%u %u) \n", time.hltag.H, time.hltag.L);
+//                    fprintf(stdout, "store found txreqflit : %x %x %x %x\n",
+//					                                         chi_sig_record.txreqflit[7],
+//					                                         chi_sig_record.txreqflit[6],
+//					                                         chi_sig_record.txreqflit[5],
+//					                                         chi_sig_record.txreqflit[4]
+//															 );
+//
 
-
-                    channel = TXREQ;
                     fwrite(&time_dec, 2 * sizeof(unsigned int), 1, chi_dump_file);
-                    fwrite(&channel, sizeof(unsigned int), 1, chi_dump_file);
+                    fwrite((void*)&req_ch, sizeof(unsigned int), 1, chi_dump_file);
                     fwrite(&chi_sig_record.txreqflit, txreq_len * sizeof(byte_T), 1, chi_dump_file);
+                    fprintf(stdout, "txreq channel:%d \n", *(&req_ch));
+                    fprintf(stdout, "sizeof byte_T:%ld , sizeof uint16_t:%ld\n", sizeof(byte_T), sizeof(uint16_t));
+                }
+                if(chi_sig_record.txrspflitv)
+                {
+                    fprintf(stdout, "@posedge clk; (%u %u) \n", time.hltag.H, time.hltag.L);
+
+                    fwrite(&time_dec, 2 * sizeof(unsigned int), 1, chi_dump_file);
+                    fwrite(&txrsp_ch, sizeof(unsigned int), 1, chi_dump_file);
+                    fwrite(&chi_sig_record.txrspflit, txrsp_len * sizeof(byte_T), 1, chi_dump_file);
+                }
+                if(chi_sig_record.txdatflitv)
+                {
+                    fprintf(stdout, "@posedge clk; (%u %u) \n", time.hltag.H, time.hltag.L);
+
+                    fwrite(&time_dec, 2 * sizeof(unsigned int), 1, chi_dump_file);
+                    fwrite(&txdat_ch, sizeof(unsigned int), 1, chi_dump_file);
+                    fwrite(&chi_sig_record.txdatflit, txdat_len * sizeof(byte_T), 1, chi_dump_file);
+                }
+                if(chi_sig_record.rxrspflitv)
+                {
+                    fprintf(stdout, "@posedge clk; rxrsp (%u %u) \n", time.hltag.H, time.hltag.L);
+
+                    fwrite(&time_dec, 2 * sizeof(unsigned int), 1, chi_dump_file);
+                    fwrite((void *)&rxrsp_ch, sizeof(uint32_t), 1, chi_dump_file);
+                    fwrite(&chi_sig_record.rxrspflit, rxrsp_len * sizeof(byte_T), 1, chi_dump_file);
+                }
+                if(chi_sig_record.rxdatflitv)
+                {
+                    fprintf(stdout, "@posedge clk; (%u %u) \n", time.hltag.H, time.hltag.L);
+
+                    fwrite(&time_dec, 2 * sizeof(unsigned int), 1, chi_dump_file);
+                    fwrite(&rxdat_ch, sizeof(unsigned int), 1, chi_dump_file);
+                    fwrite(&chi_sig_record.rxdatflit, rxdat_len * sizeof(byte_T), 1, chi_dump_file);
+                }
+                if(chi_sig_record.rxsnpflitv)
+                {
+                    fprintf(stdout, "@posedge clk; (%u %u) \n", time.hltag.H, time.hltag.L);
+
+                    fwrite(&time_dec, 2 * sizeof(unsigned int), 1, chi_dump_file);
+                    fwrite(&rxsnp_ch, sizeof(unsigned int), 1, chi_dump_file);
+                    fwrite(&chi_sig_record.rxsnpflit, rxsnp_len * sizeof(byte_T), 1, chi_dump_file);
                 }
             }
         }
 
-        if(memcmp(chi_map[var_idcode].name, (char*)"rstn", strlen("rstn")) == 0)
-        {
-            //fprintf(stdout, "vc size: %ld\n", sizeof(*vc_ptr));
-            chi_sig_record.rstn = *vc_ptr;
-            fprintf(stdout, "(%u %u) => var(%u): val: ",
-                time.hltag.H, time.hltag.L, (unsigned int)var_idcode);
-            PrintAsVerilog(vc_ptr, 1);
-        }
-
-
         if(memcmp(chi_map[var_idcode].name, (char*)"txreqflitpend", strlen("txreqflitpend")) == 0)
         {
-            fprintf(stdout, "(%u %u) => var(%u): val: ",
-                time.hltag.H, time.hltag.L, (unsigned int)var_idcode);
-            PrintAsVerilog(vc_ptr, 1);
+            continue;
         }
         else if(memcmp(chi_map[var_idcode].name, (char*)"txreqflitv", strlen("txreqflitv")) == 0)
         {
             chi_sig_record.txreqflitv = *vc_ptr;
-            fprintf(stdout, "(%u %u) => var(%u): val: ",
-                time.hltag.H, time.hltag.L, (unsigned int)var_idcode);
-            PrintAsVerilog(vc_ptr, 1);
         }
         else if(memcmp(chi_map[var_idcode].name, (char*)"txreqflit", strlen("txreqflit")) == 0)
         {
-            fprintf(stdout, "(%u %u) => var(%u): val: \n",
+            fprintf(stdout, "(%u %u) => var(%u): val: ",
                 time.hltag.H, time.hltag.L, (unsigned int)var_idcode);
             PrintAsVerilogHex(vc_ptr, var_idcode, chi_map, chi_sig_record.txreqflit);
 
@@ -198,57 +240,107 @@ dumpCHIData(ffrObject* fsdb_obj, map<string,sigInfo> chi_sig_map)
                 txreq_len = (chi_map[var_idcode].lbitnum+1)/8 + 1;
         }
 
-        //if(strcmp(chi_map[var_idcode].name, (char*)"txrspflitv") == 0)
-        //    chi_sig_record.txrspflitv = *vc_ptr;
+        if(memcmp(chi_map[var_idcode].name, (char*)"txrspflitpend", strlen("txrspflitpend")) == 0)
+        {
+            continue;
+        }
+        else if(memcmp(chi_map[var_idcode].name, (char*)"txrspflitv", strlen("txrspflitv")) == 0)
+        {
+            chi_sig_record.txrspflitv = *vc_ptr;
+        }
+        else if(memcmp(chi_map[var_idcode].name, (char*)"txrspflit", strlen("txrspflit")) == 0)
+        {
+            fprintf(stdout, "(%u %u) => var(%u): val: ",
+                time.hltag.H, time.hltag.L, (unsigned int)var_idcode);
+            PrintAsVerilogHex(vc_ptr, var_idcode, chi_map, chi_sig_record.txrspflit);
 
-        //if(strcmp(chi_map[var_idcode].name, (char*)"txrspflit") == 0)
-        //{
-        //    for(i=0; i<chi_map[var_idcode].lbitnum + 1; i++) {
-        //        chi_sig_record.txrspflit[i] = *(vc_ptr+i);
-        //    }
-        //}
+            if((chi_map[var_idcode].lbitnum+1) % 8 == 0)
+                txrsp_len = (chi_map[var_idcode].lbitnum+1)/8;
+            else
+                txrsp_len = (chi_map[var_idcode].lbitnum+1)/8 + 1;
+        }
 
-        //if(strcmp(chi_map[var_idcode].name, (char*)"txdatflitv") == 0)
-        //    chi_sig_record.txdatflitv = *vc_ptr;
+        if(memcmp(chi_map[var_idcode].name, (char*)"txdatflitpend", strlen("txdatflitpend")) == 0)
+        {
+            continue;
+        }
+        else if(memcmp(chi_map[var_idcode].name, (char*)"txdatflitv", strlen("txdatflitv")) == 0)
+        {
+            chi_sig_record.txdatflitv = *vc_ptr;
+        }
+        else if(memcmp(chi_map[var_idcode].name, (char*)"txdatflit", strlen("txdatflit")) == 0)
+        {
+            fprintf(stdout, "(%u %u) => var(%u): val: ",
+                time.hltag.H, time.hltag.L, (unsigned int)var_idcode);
+            PrintAsVerilogHex(vc_ptr, var_idcode, chi_map, chi_sig_record.txdatflit);
 
-        //if(strcmp(chi_map[var_idcode].name, (char*)"txdatflit") == 0)
-        //{
-        //    for(i=0; i<chi_map[var_idcode].lbitnum + 1; i++) {
-        //        chi_sig_record.txdatflit[i] = *(vc_ptr+i);
-        //    }
-        //}
+            if((chi_map[var_idcode].lbitnum+1) % 8 == 0)
+                txdat_len = (chi_map[var_idcode].lbitnum+1)/8;
+            else
+                txdat_len = (chi_map[var_idcode].lbitnum+1)/8 + 1;
+        }
 
-        //if(strcmp(chi_map[var_idcode].name, (char*)"rxrsplitv") == 0)
-        //    chi_sig_record.rxrspflitv = *vc_ptr;
+        if(memcmp(chi_map[var_idcode].name, (char*)"rxrspflitpend", strlen("rxrspflitpend")) == 0)
+        {
+            continue;
+        }
+        else if(memcmp(chi_map[var_idcode].name, (char*)"rxrspflitv", strlen("rxrspflitv")) == 0)
+        {
+            chi_sig_record.rxrspflitv = *vc_ptr;
+        }
+        else if(memcmp(chi_map[var_idcode].name, (char*)"rxrspflit", strlen("rxrspflit")) == 0)
+        {
+            fprintf(stdout, "(%u %u) => var(%u): val: ",
+                time.hltag.H, time.hltag.L, (unsigned int)var_idcode);
+            PrintAsVerilogHex(vc_ptr, var_idcode, chi_map, chi_sig_record.rxrspflit);
 
-        //if(strcmp(chi_map[var_idcode].name, (char*)"rxrspflit") == 0)
-        //{
-        //    for(i=0; i<chi_map[var_idcode].lbitnum + 1; i++) {
-        //        chi_sig_record.rxrspflit[i] = *(vc_ptr+i);
-        //    }
-        //}
+            if((chi_map[var_idcode].lbitnum+1) % 8 == 0)
+                rxrsp_len = (chi_map[var_idcode].lbitnum+1)/8;
+            else
+                rxrsp_len = (chi_map[var_idcode].lbitnum+1)/8 + 1;
+        }
 
-        //if(strcmp(chi_map[var_idcode].name ,(char*)"rxdatflitv") == 0)
-        //    chi_sig_record.rxdatflitv = *vc_ptr;
+        if(memcmp(chi_map[var_idcode].name, (char*)"rxdatflitpend", strlen("rxdatflitpend")) == 0)
+        {
+            continue;
+        }
+        else if(memcmp(chi_map[var_idcode].name, (char*)"rxdatflitv", strlen("rxdatflitv")) == 0)
+        {
+            chi_sig_record.rxdatflitv = *vc_ptr;
+        }
+        else if(memcmp(chi_map[var_idcode].name, (char*)"rxdatflit", strlen("rxdatflit")) == 0)
+        {
+            fprintf(stdout, "(%u %u) => var(%u): val: ",
+                time.hltag.H, time.hltag.L, (unsigned int)var_idcode);
+            PrintAsVerilogHex(vc_ptr, var_idcode, chi_map, chi_sig_record.rxdatflit);
 
-        //if(strcmp(chi_map[var_idcode].name, (char*)"rxdatflit") == 0)
-        //{
-        //    for(i=0; i<chi_map[var_idcode].lbitnum + 1; i++) {
-        //        chi_sig_record.rxdatflit[i] = *(vc_ptr+i);
-        //    }
-        //}
+            if((chi_map[var_idcode].lbitnum+1) % 8 == 0)
+                rxdat_len = (chi_map[var_idcode].lbitnum+1)/8;
+            else
+                rxdat_len = (chi_map[var_idcode].lbitnum+1)/8 + 1;
+        }
 
-        //if(strcmp(chi_map[var_idcode].name, (char*)"rxsnpflitv") == 0)
-        //    chi_sig_record.rxsnpflitv = *vc_ptr;
+        if(memcmp(chi_map[var_idcode].name, (char*)"rxsnpflitpend", strlen("rxsnpflitpend")) == 0)
+        {
+            continue;
+        }
+        else if(memcmp(chi_map[var_idcode].name, (char*)"rxsnpflitv", strlen("rxsnpflitv")) == 0)
+        {
+            chi_sig_record.rxsnpflitv = *vc_ptr;
+        }
+        else if(memcmp(chi_map[var_idcode].name, (char*)"rxsnpflit", strlen("rxsnpflit")) == 0)
+        {
+            fprintf(stdout, "(%u %u) => var(%u): val: ",
+                time.hltag.H, time.hltag.L, (unsigned int)var_idcode);
+            PrintAsVerilogHex(vc_ptr, var_idcode, chi_map, chi_sig_record.rxsnpflit);
 
-        //if(strcmp(chi_map[var_idcode].name, (char*)"rxsnpflit") == 0)
-        //{
-        //    for(i=0; i<chi_map[var_idcode].lbitnum + 1; i++) {
-        //        chi_sig_record.rxsnpflit[i] = *(vc_ptr+i);
-        //    }
-        //}
-
+            if((chi_map[var_idcode].lbitnum+1) % 8 == 0)
+                rxsnp_len = (chi_map[var_idcode].lbitnum+1)/8;
+            else
+                rxsnp_len = (chi_map[var_idcode].lbitnum+1)/8 + 1;
+        }
     }
+
     //
     // Remember to call ffrFree() to free the memory occupied by
     // this time-based value change trvs hdl
@@ -325,13 +417,13 @@ PrintAsVerilogHex(byte_T *ptr, fsdbVarIdcode var_idcode, map<int, sigInfo> chi_m
 
             flit[end_idx - i/VALUES_IN_A_SEG - 1] = hex_byte + hex_byte_h;
 
-            if ((VALUES_DUMPED_IN_A_LINE - 1) ==
-                (i % VALUES_DUMPED_IN_A_LINE)) {
-                fprintf(stdout, "\n");
-            }
-            else {
-                fprintf(stdout, " ");
-            }
+            //if ((VALUES_DUMPED_IN_A_LINE - 1) ==
+            //    (i % VALUES_DUMPED_IN_A_LINE)) {
+            //    fprintf(stdout, "\n");
+            //}
+            //else {
+            //    fprintf(stdout, " ");
+            //}
         }
     }
 

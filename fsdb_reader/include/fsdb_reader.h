@@ -65,7 +65,14 @@ typedef struct
     byte_T rxsnpflit[20];
 } chi_sig_t;
 
-enum CHIChannel {TXREQ, TXRSP, TXDAT, RXRSP, RXDAT, RXSNP};
+typedef enum CHIChannel {
+    TXREQ,
+    TXRSP, 
+    TXDAT, 
+    RXRSP, 
+    RXDAT, 
+    RXSNP
+} Channel;
 
 //
 // The tree callback function, it's used to traverse the design 
