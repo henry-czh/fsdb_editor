@@ -44,16 +44,17 @@ main(int argc, char *argv[])
     // check the file to see if it's a fsdb file or not.
     //
     if (FALSE == ffrObject::ffrIsFSDB(argv[1])) {
-	fprintf(stderr, "%s is not an fsdb file.\n", argv[1]);
-	return FSDB_RC_FAILURE;
+	    fprintf(stderr, "%s is not an fsdb file.\n", argv[1]);
+	    return FSDB_RC_FAILURE;
     }
 
     ffrFSDBInfo fsdb_info;
 
     ffrObject::ffrGetFSDBInfo(argv[1], fsdb_info);
+
     if (FSDB_FT_VERILOG != fsdb_info.file_type) {
-  	fprintf(stderr, "file type is not verilog.\n");
-	return FSDB_RC_FAILURE;
+  	    fprintf(stderr, "file type is not verilog.\n");
+	    return FSDB_RC_FAILURE;
     }
 
     //
@@ -80,19 +81,19 @@ main(int argc, char *argv[])
     // type case on the callback data so that it can read the scope 
     // defition.
     //
-    ffrObject *fsdb_obj =
-	ffrObject::ffrOpen3(argv[1]);
+    ffrObject *fsdb_obj = ffrObject::ffrOpen3(argv[1]);
+
     if (NULL == fsdb_obj) {
-	fprintf(stderr, "ffrObject::ffrOpen() failed.\n");
-	exit(FSDB_RC_OBJECT_CREATION_FAILED);
+	    fprintf(stderr, "ffrObject::ffrOpen() failed.\n");
+	    exit(FSDB_RC_OBJECT_CREATION_FAILED);
     }
     fsdb_obj->ffrSetTreeCBFunc(__MyTreeCB, &signal_map);
 
     if (FSDB_FT_VERILOG != fsdb_obj->ffrGetFileType()) {
-	fprintf(stderr, 
+	    fprintf(stderr, 
 		"%s is not verilog type fsdb, just return.\n", argv[1]);
-	fsdb_obj->ffrClose();
-	return FSDB_RC_SUCCESS;
+	    fsdb_obj->ffrClose();
+	    return FSDB_RC_SUCCESS;
     }
 
     //
