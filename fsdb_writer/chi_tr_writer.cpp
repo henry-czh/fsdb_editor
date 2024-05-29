@@ -150,6 +150,8 @@ fsdbAttrHdl     size_attr;
 fsdbAttrHdl     resp_attr;
 
 // CHI Protocal variable definition and delcaration
+fsdbStreamHdl   reqtracker_stream;
+fsdbStreamHdl   snptracker_stream;
 fsdbStreamHdl   req_stream;
 fsdbStreamHdl   rxrsp_stream;
 fsdbStreamHdl   rxdat_stream;
@@ -316,40 +318,172 @@ __CreateTree(ffwObject* ffw_obj)
 }
 
 fsdbTransId
-__WriteOneAphase(ffwObject* ffw_obj, fsdbXTag btime, fsdbXTag etime,
-                 str_T cmd, uint_T addr, uint_T size,
-                 str_T master, str_T slave)
+__WriteOneRspFlit(ffwObject* ffw_obj, *rspFlit rspflit, *fsdbStreamHdl rsp_stream)
 {
     fsdbTag64       xtag;
-    fsdbAttrHdlVal  aphase_val[5];
+    fsdbAttrHdlVal  aphase_val[9];
     fsdbTransId     aphase_trans;
 
-    aphase_val[0].hdl   = cmd_attr;
-    aphase_val[0].value = (byte_T *)&cmd;
-    aphase_val[1].hdl   = addr_attr;
-    aphase_val[1].value = (byte_T *)&addr;
-    aphase_val[2].hdl   = size_attr;
-    aphase_val[2].value = (byte_T *)&size;
-    aphase_val[3].hdl   = master_attr;
-    aphase_val[3].value = (byte_T *)&master;
-    aphase_val[4].hdl   = slave_attr;
-    aphase_val[4].value = (byte_T *)&slave;
+    aphase_val[0].hdl   = tgtid_attr;
+    aphase_val[0].value = (byte_T *)&(rspflit->tgtid);
+    aphase_val[1].hdl   = srcid_attr;
+    aphase_val[1].value = (byte_T *)&(rspflit->srcid);
+    aphase_val[2].hdl   = txnid_attr;
+    aphase_val[2].value = (byte_T *)&(rspflt->txnid);
+    aphase_val[3].hdl   = opcode_attr;
+    aphase_val[3].value = (byte_T *)&(rspflit->opcode);
+    aphase_val[4].hdl   = resperr_attr;
+    aphase_val[4].value = (byte_T *)&(rspflit->resperr);
+    aphase_val[5].hdl   = resp;
+    aphase_val[5].value = (byte_T *)&(rspflit->resp);
+    aphase_val[6].hdl   = fwdstate_datapull_datasource_attr;
+    aphase_val[6].value = (byte_T *)&(rspflit->fwdstate_datafull_datasouce_cf);
+    aphase_val[7].hdl   = dbid_attr;
+    aphase_val[7].value = (byte_T *)&(rspflit->dbid);
+    aphase_val[8].hdl   = pcrdtype_attr;
+    aphase_val[8].value = (byte_T *)&(rspflit->pcrdtype);
+
+    btime.hltag.H = 0;
+    btime.hltag.L = rspflit->time;
+    etime.hltag.H = 0;
+    etime.hltag.L = rspflit->time + 1;
 
     xtag.H = btime.hltag.H;
     xtag.L = btime.hltag.L;
     ffw_CreateXCoorByHnL(ffw_obj, xtag.H, xtag.L);
-    aphase_trans = ffw_BeginTransaction(ffw_obj, aphase_stream, btime,
+    rsp_trans = ffw_BeginTransaction(ffw_obj, rsp_stream, btime,
                                         "aphase", NULL, 0);
-    if (FSDB_INVALID_TRANS_ID == aphase_trans) {
-        fprintf(stderr, "aphase fails during begin!\n");
+    if (FSDB_INVALID_TRANS_ID == rsp_trans) {
+        fprintf(stderr, "rsp fails during begin!\n");
     }
 
     if (FSDB_RC_SUCCESS !=
-        ffw_EndTransaction(ffw_obj, aphase_trans, etime, aphase_val, 5)) {
+        ffw_EndTransaction(ffw_obj, rsp_trans, etime, aphase_val, 9)) {
+        fprintf(stderr, "rsp fails during end!\n");
+    }
+
+    return rsp_trans;
+}
+
+
+fsdbTransId
+__WriteOneDatFlit(ffwObject* ffw_obj, *datFlit datflit, *fsdbStreamHdl dat_stream)
+{
+    fsdbTag64       xtag;
+    fsdbAttrHdlVal  aphase_val[13];
+    fsdbTransId     aphase_trans;
+
+    aphase_val[0].hdl   = tgtid_attr;
+    aphase_val[0].value = (byte_T *)&(datflit->tgtid);
+    aphase_val[1].hdl   = srcid_attr;
+    aphase_val[1].value = (byte_T *)&(datflit->srcid);
+    aphase_val[2].hdl   = txnid_attr;
+    aphase_val[2].value = (byte_T *)&(rspflt->txnid);
+    aphase_val[3].hdl   = homenid_attr;
+    aphase_val[3].value = (byte_T *)&(datflit->homenid);
+    aphase_val[3].hdl   = opcode_attr;
+    aphase_val[3].value = (byte_T *)&(datflit->opcode);
+    aphase_val[4].hdl   = resperr_attr;
+    aphase_val[4].value = (byte_T *)&(datflit->resperr);
+    aphase_val[5].hdl   = resp;
+    aphase_val[5].value = (byte_T *)&(datflit->resp);
+    aphase_val[6].hdl   = fwdstate_datapull_datasource_attr;
+    aphase_val[6].value = (byte_T *)&(datflit->fwdstate_datafull_datasouce_cf);
+    aphase_val[7].hdl   = dbid_attr;
+    aphase_val[7].value = (byte_T *)&(datflit->dbid);
+    aphase_val[7].hdl   = ccid_attr;
+    aphase_val[7].value = (byte_T *)&(datflit->ccid);
+    aphase_val[7].hdl   = dataid_attr;
+    aphase_val[7].value = (byte_T *)&(datflit->dataid);
+    aphase_val[8].hdl   = be_attr;
+    aphase_val[8].value = (byte_T *)&(datflit->be);
+    aphase_val[8].hdl   = data_attr;
+    aphase_val[8].value = (byte_T *)&(datflit->data;
+
+    btime.hltag.H = 0;
+    btime.hltag.L = datflit->time;
+    etime.hltag.H = 0;
+    etime.hltag.L = datflit->time + 1;
+
+    xtag.H = btime.hltag.H;
+    xtag.L = btime.hltag.L;
+    ffw_CreateXCoorByHnL(ffw_obj, xtag.H, xtag.L);
+    dat_trans = ffw_BeginTransaction(ffw_obj, dat_stream, btime,
+                                        "aphase", NULL, 0);
+    if (FSDB_INVALID_TRANS_ID == dat_trans) {
+        fprintf(stderr, "dat fails during begin!\n");
+    }
+
+    if (FSDB_RC_SUCCESS !=
+        ffw_EndTransaction(ffw_obj, dat_trans, etime, aphase_val, 13)) {
         fprintf(stderr, "aphase fails during end!\n");
     }
 
-    return aphase_trans;
+    return dat_trans;
+}
+
+fsdbTransId
+__WriteOneSnpFlit(ffwObject* ffw_obj, *snpFlit snpflit, *fsdbStreamHdl snp_stream)
+{
+    fsdbTag64       xtag;
+    fsdbAttrHdlVal  aphase_val[11];
+    fsdbTransId     aphase_trans;
+
+    uint16_t    srcid;
+    uint16_t    txnid;
+    uint16_t    fwdnid;
+    uint16_t    fwdtxnid;
+    uint8_t     opcode;
+    uint64_t    addr;
+    bool        ns;
+    bool        donotgotosd;
+    bool        rettosrc;
+    bool        tracetag;
+    uint16_t    mpam;
+
+    aphase_val[1].hdl   = srcid_attr;
+    aphase_val[1].value = (byte_T *)&(snpflit->srcid);
+    aphase_val[2].hdl   = txnid_attr;
+    aphase_val[2].value = (byte_T *)&(rspflt->txnid);
+    aphase_val[3].hdl   = fwdnid_attr;
+    aphase_val[3].value = (byte_T *)&(snpflit->fwdnid);
+    aphase_val[3].hdl   = fwdtxnid_attr;
+    aphase_val[3].value = (byte_T *)&(snpflit->fwdtxnid);
+    aphase_val[4].hdl   = opcode_attr;
+    aphase_val[4].value = (byte_T *)&(snpflit->opcode);
+    aphase_val[5].hdl   = addr_attr;
+    aphase_val[5].value = (byte_T *)&(snpflit->addr);
+    aphase_val[6].hdl   = ns_attr;
+    aphase_val[6].value = (byte_T *)&(snpflit->ns);
+    aphase_val[7].hdl   = donotgotosd_attr;
+    aphase_val[7].value = (byte_T *)&(snpflit->donotgotosd);
+    aphase_val[7].hdl   = rettosrc_attr;
+    aphase_val[7].value = (byte_T *)&(snpflit->rettosrc);
+    aphase_val[7].hdl   = tracetag_attr;
+    aphase_val[7].value = (byte_T *)&(snpflit->tracetag);
+    aphase_val[8].hdl   = mpam_attr;
+    aphase_val[8].value = (byte_T *)&(snpflit->mpam);
+
+    btime.hltag.H = 0;
+    btime.hltag.L = snpflit->time;
+    etime.hltag.H = 0;
+    etime.hltag.L = snpflit->time + 1;
+
+    xtag.H = btime.hltag.H;
+    xtag.L = btime.hltag.L;
+    ffw_CreateXCoorByHnL(ffw_obj, xtag.H, xtag.L);
+    snp_trans = ffw_BeginTransaction(ffw_obj, snp_stream, btime,
+                                        "aphase", NULL, 0);
+    if (FSDB_INVALID_TRANS_ID == snp_trans) {
+        fprintf(stderr, "snp fails during begin!\n");
+    }
+
+    if (FSDB_RC_SUCCESS !=
+        ffw_EndTransaction(ffw_obj, snp_trans, etime, aphase_val, 11)) {
+        fprintf(stderr, "aphase fails during end!\n");
+    }
+
+    return snp_trans;
 }
 
 fsdbTransId
@@ -406,6 +540,14 @@ __WriteOneReqFlit(ffwObject* ffw_obj, reqFlit *reqflit)
     dphase_val[22].hdl   = returnnid_stashnid_attr;
     dphase_val[22].value = (byte_T *)&(reqflit->return_stashnid_cf);
 
+    fsdbXTag btime;
+    fsdbXTag etime;
+
+    btime.hltag.H = 0;
+    btime.hltag.L = reqflit->time;
+    etime.hltag.H = 0;
+    etime.hltag.L = reqflit->time + 1;
+
     xtag.H = btime.hltag.H;
     xtag.L = btime.hltag.L;
     ffw_CreateXCoorByHnL(ffw_obj, xtag.H, xtag.L);
@@ -424,7 +566,7 @@ __WriteOneReqFlit(ffwObject* ffw_obj, reqFlit *reqflit)
 }
 
 fsdbTransId
-__WriteOneTransfer(ffwObject* ffw_obj, fsdbXTag btime, fsdbXTag etime,
+__WriteOneReqTracker(ffwObject* ffw_obj, fsdbXTag btime, fsdbXTag etime,
                    str_T cmd, uint_T addr, uint_T data, uint_T size,
                    str_T resp, str_T master, str_T slave)
 {
