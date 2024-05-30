@@ -18,6 +18,8 @@
     #undef NOVAS_FSDB
 #endif
 
+#include <stdint.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -138,16 +140,16 @@ typedef struct SnpFlitT
 //
 // Global variable definition and declaration
 //
-fsdbStreamHdl   aphase_stream;
-fsdbStreamHdl   dphase_stream;
-fsdbStreamHdl   transfer_stream;
-fsdbAttrHdl     addr_attr;
-fsdbAttrHdl     data_attr;
-fsdbAttrHdl     cmd_attr;
-fsdbAttrHdl     master_attr;
-fsdbAttrHdl     slave_attr;
-fsdbAttrHdl     size_attr;
-fsdbAttrHdl     resp_attr;
+//fsdbStreamHdl   aphase_stream;
+//fsdbStreamHdl   dphase_stream;
+//fsdbStreamHdl   transfer_stream;
+//fsdbAttrHdl     addr_attr;
+//fsdbAttrHdl     data_attr;
+//fsdbAttrHdl     cmd_attr;
+//fsdbAttrHdl     master_attr;
+//fsdbAttrHdl     slave_attr;
+//fsdbAttrHdl     size_attr;
+//fsdbAttrHdl     resp_attr;
 
 // CHI Protocal variable definition and delcaration
 fsdbStreamHdl   reqtracker_stream;
@@ -155,7 +157,6 @@ fsdbStreamHdl   snptracker_stream;
 fsdbStreamHdl   req_stream;
 fsdbStreamHdl   rxrsp_stream;
 fsdbStreamHdl   rxdat_stream;
-fsdbStreamHdl   txrsp_stream;
 fsdbStreamHdl   txrsp_stream;
 fsdbStreamHdl   txdat_stream;
 fsdbStreamHdl   rxsnp_stream;
@@ -165,6 +166,7 @@ fsdbAttrHdl     tgtid_attr;
 fsdbAttrHdl     srcid_attr;
 fsdbAttrHdl     txnid_attr;
 fsdbAttrHdl     fwdnid_attr;
+fsdbAttrHdl     fwdtxnid_attr;
 fsdbAttrHdl     returnnid_stashnid_attr;
 fsdbAttrHdl     stashnidvalid_endian_attr;
 fsdbAttrHdl     returntxnid_stashlpidvalid_stashlpid_attr;
@@ -177,6 +179,9 @@ fsdbAttrHdl     allowretry_attr;
 fsdbAttrHdl     order_attr;
 fsdbAttrHdl     pcrdtype_attr;
 fsdbAttrHdl     memattr_attr;
+fsdbAttrHdl     allocate_attr;
+fsdbAttrHdl     device_attr;
+fsdbAttrHdl     ewa_attr;
 fsdbAttrHdl     snpattr_attr;
 fsdbAttrHdl     lpid_attr;
 fsdbAttrHdl     excl_snoopme_attr;
@@ -187,13 +192,16 @@ fsdbAttrHdl     resp_attr;
 fsdbAttrHdl     fwdstate_datapull_datasource_attr;
 fsdbAttrHdl     dbid_attr;
 fsdbAttrHdl     donotgotosd_donotdatapull_attr;
+fsdbAttrHdl     donotgotosd_attr;
 fsdbAttrHdl     rettosrc_attr;
 fsdbAttrHdl     homenid_attr;
 fsdbAttrHdl     ccid_attr;
+fsdbAttrHdl     dataid_attr;
 fsdbAttrHdl     be_attr;
 fsdbAttrHdl     data_attr;
 fsdbAttrHdl     data_check_attr;
 fsdbAttrHdl     poison_attr;
+fsdbAttrHdl     mpam_attr;
 //
 // Function Declaration
 //
@@ -280,64 +288,65 @@ __CreateTree(ffwObject* ffw_obj)
     rxdat_stream = ffw_CreateStream(ffw_obj, "rxdat_flit");
     rxsnp_stream = ffw_CreateStream(ffw_obj, "rxsnp_flit");
 
-    qos_attr                                    = __CreateAttr(ffw_obj, "qos_attr                                 ", FSDB_ATTR_DT_CHAR, 0, 0, FALSE, FSDB_DBT_DATA);
-    tgtid_attr                                  = __CreateAttr(ffw_obj, "tgtid_attr                               ", FSDB_ATTR_DT_CHAR, 0, 0, FALSE, FSDB_DBT_DATA);
-    srcid_attr                                  = __CreateAttr(ffw_obj, "srcid_attr                               ", FSDB_ATTR_DT_CHAR, 0, 0, FALSE, FSDB_DBT_DATA);
-    txnid_attr                                  = __CreateAttr(ffw_obj, "txnid_attr                               ", FSDB_ATTR_DT_CHAR, 0, 0, FALSE, FSDB_DBT_DATA);
-    fwdnid_attr                                 = __CreateAttr(ffw_obj, "fwdnid_attr                              ", FSDB_ATTR_DT_CHAR, 0, 0, FALSE, FSDB_DBT_DATA);
-    returnnid_stashnid_attr                     = __CreateAttr(ffw_obj, "returnnid_stashnid_attr                  ", FSDB_ATTR_DT_CHAR, 0, 0, FALSE, FSDB_DBT_DATA);
-    stashnidvalid_endian_attr                   = __CreateAttr(ffw_obj, "stashnidvalid_endian_attr                ", FSDB_ATTR_DT_CHAR, 0, 0, FALSE, FSDB_DBT_DATA);
-    returntxnid_stashlpidvalid_stashlpid_attr   = __CreateAttr(ffw_obj, "returntxnid_stashlpidvalid_stashlpid_attr", FSDB_ATTR_DT_CHAR, 0, 0, FALSE, FSDB_DBT_DATA);
-    opcode_attr                                 = __CreateAttr(ffw_obj, "opcode_attr                              ", FSDB_ATTR_DT_INT32, 0, 0, FALSE, FSDB_DBT_DATA);
-    size_attr                                   = __CreateAttr(ffw_obj, "size_attr                                ", FSDB_ATTR_DT_CHAR, 0, 0, FALSE, FSDB_DBT_DATA);
-    addr_attr                                   = __CreateAttr(ffw_obj, "addr_attr                                ", FSDB_ATTR_DT_INT64, 0, 0, FALSE, FSDB_DBT_DATA);
-    ns_attr                                     = __CreateAttr(ffw_obj, "ns_attr                                  ", FSDB_ATTR_DT_BOOL, 0, 0, FALSE, FSDB_DBT_DATA);
-    likelyshared_attr                           = __CreateAttr(ffw_obj, "likelyshared_attr                        ", FSDB_ATTR_DT_BOOL, 0, 0, FALSE, FSDB_DBT_DATA);
-    order_attr                                  = __CreateAttr(ffw_obj, "order_attr                               ", FSDB_ATTR_DT_CHAR, 0, 0, FALSE, FSDB_DBT_DATA);
-    pcrdtype_attr                               = __CreateAttr(ffw_obj, "pcrdtype_attr                            ", FSDB_ATTR_DT_CHAR, 0, 0, FALSE, FSDB_DBT_DATA);
-    memattr_attr                                = __CreateAttr(ffw_obj, "memattr_attr                             ", FSDB_ATTR_DT_CHAR, 0, 0, FALSE, FSDB_DBT_DATA);
-    snpattr_attr                                = __CreateAttr(ffw_obj, "snpattr_attr                             ", FSDB_ATTR_DT_CHAR, 0, 0, FALSE, FSDB_DBT_DATA);
-    lpid_attr                                   = __CreateAttr(ffw_obj, "lpid_attr                                ", FSDB_ATTR_DT_CHAR, 0, 0, FALSE, FSDB_DBT_DATA);
-    excl_snoopme_attr                           = __CreateAttr(ffw_obj, "excl_snoopme_attr                        ", FSDB_ATTR_DT_BOOL, 0, 0, FALSE, FSDB_DBT_DATA);
-    expcompack_attr                             = __CreateAttr(ffw_obj, "expcompack_attr                          ", FSDB_ATTR_DT_BOOL, 0, 0, FALSE, FSDB_DBT_DATA);
-    tracetag_attr                               = __CreateAttr(ffw_obj, "tracetag_attr                            ", FSDB_ATTR_DT_CHAR, 0, 0, FALSE, FSDB_DBT_DATA);
-    resperr_attr                                = __CreateAttr(ffw_obj, "resperr_attr                             ", FSDB_ATTR_DT_CHAR, 0, 0, FALSE, FSDB_DBT_DATA);
-    resp_attr                                   = __CreateAttr(ffw_obj, "resp_attr                                ", FSDB_ATTR_DT_CHAR, 0, 0, FALSE, FSDB_DBT_DATA);
-    fwdstate_datapull_datasource_attr           = __CreateAttr(ffw_obj, "fwdstate_datapull_datasource_attr        ", FSDB_ATTR_DT_CHAR, 0, 0, FALSE, FSDB_DBT_DATA);
-    dbid_attr                                   = __CreateAttr(ffw_obj, "dbid_attr                                ", FSDB_ATTR_DT_INT32, 0, 0, FALSE, FSDB_DBT_DATA);
-    donotgotosd_donotdatapull_attr              = __CreateAttr(ffw_obj, "donotgotosd_donotdatapull_attr           ", FSDB_ATTR_DT_CHAR, 0, 0, FALSE, FSDB_DBT_DATA);
-    rettosrc_attr                               = __CreateAttr(ffw_obj, "rettosrc_attr                            ", FSDB_ATTR_DT_CHAR, 0, 0, FALSE, FSDB_DBT_DATA);
-    homenid_attr                                = __CreateAttr(ffw_obj, "homenid_attr                             ", FSDB_ATTR_DT_CHAR, 0, 0, FALSE, FSDB_DBT_DATA);
-    ccid_attr                                   = __CreateAttr(ffw_obj, "ccid_attr                                ", FSDB_ATTR_DT_CHAR, 0, 0, FALSE, FSDB_DBT_DATA);
-    be_attr                                     = __CreateAttr(ffw_obj, "be_attr                                  ", FSDB_ATTR_DT_INT64, 0, 0, FALSE, FSDB_DBT_DATA);
-    data_attr                                   = __CreateAttr(ffw_obj, "data_attr                                ", FSDB_ATTR_DT_INT64, 0, 0, FALSE, FSDB_DBT_DATA);
-    data_check_attr                             = __CreateAttr(ffw_obj, "data_check_attr                          ", FSDB_ATTR_DT_INT64, 0, 0, FALSE, FSDB_DBT_DATA);
-    poison_attr                                 = __CreateAttr(ffw_obj, "poison_attr                              ", FSDB_ATTR_DT_CHAR, 0, 0, FALSE, FSDB_DBT_DATA);
+    qos_attr                                    = __CreateAttr(ffw_obj, "qos_attr", FSDB_ATTR_DT_CHAR, 0, 0, FALSE, FSDB_BDT_GENERIC);
+    tgtid_attr                                  = __CreateAttr(ffw_obj, "tgtid_attr                               ", FSDB_ATTR_DT_CHAR, 0, 0, FALSE, FSDB_BDT_GENERIC);
+    srcid_attr                                  = __CreateAttr(ffw_obj, "srcid_attr                               ", FSDB_ATTR_DT_CHAR, 0, 0, FALSE, FSDB_BDT_GENERIC);
+    txnid_attr                                  = __CreateAttr(ffw_obj, "txnid_attr                               ", FSDB_ATTR_DT_CHAR, 0, 0, FALSE, FSDB_BDT_GENERIC);
+    fwdnid_attr                                 = __CreateAttr(ffw_obj, "fwdnid_attr                              ", FSDB_ATTR_DT_CHAR, 0, 0, FALSE, FSDB_BDT_GENERIC);
+    returnnid_stashnid_attr                     = __CreateAttr(ffw_obj, "returnnid_stashnid_attr                  ", FSDB_ATTR_DT_CHAR, 0, 0, FALSE, FSDB_BDT_GENERIC);
+    stashnidvalid_endian_attr                   = __CreateAttr(ffw_obj, "stashnidvalid_endian_attr                ", FSDB_ATTR_DT_CHAR, 0, 0, FALSE, FSDB_BDT_GENERIC);
+    returntxnid_stashlpidvalid_stashlpid_attr   = __CreateAttr(ffw_obj, "returntxnid_stashlpidvalid_stashlpid_attr", FSDB_ATTR_DT_CHAR, 0, 0, FALSE, FSDB_BDT_GENERIC);
+    opcode_attr                                 = __CreateAttr(ffw_obj, "opcode_attr                              ", FSDB_ATTR_DT_INT32, 0, 0, FALSE, FSDB_BDT_GENERIC);
+    size_attr                                   = __CreateAttr(ffw_obj, "size_attr                                ", FSDB_ATTR_DT_CHAR, 0, 0, FALSE, FSDB_BDT_GENERIC);
+    addr_attr                                   = __CreateAttr(ffw_obj, "addr_attr                                ", FSDB_ATTR_DT_INT64, 0, 0, FALSE, FSDB_BDT_GENERIC);
+    ns_attr                                     = __CreateAttr(ffw_obj, "ns_attr                                  ", FSDB_ATTR_DT_BOOL, 0, 0, FALSE, FSDB_BDT_GENERIC);
+    likelyshared_attr                           = __CreateAttr(ffw_obj, "likelyshared_attr                        ", FSDB_ATTR_DT_BOOL, 0, 0, FALSE, FSDB_BDT_GENERIC);
+    order_attr                                  = __CreateAttr(ffw_obj, "order_attr                               ", FSDB_ATTR_DT_CHAR, 0, 0, FALSE, FSDB_BDT_GENERIC);
+    pcrdtype_attr                               = __CreateAttr(ffw_obj, "pcrdtype_attr                            ", FSDB_ATTR_DT_CHAR, 0, 0, FALSE, FSDB_BDT_GENERIC);
+    memattr_attr                                = __CreateAttr(ffw_obj, "memattr_attr                             ", FSDB_ATTR_DT_CHAR, 0, 0, FALSE, FSDB_BDT_GENERIC);
+    snpattr_attr                                = __CreateAttr(ffw_obj, "snpattr_attr                             ", FSDB_ATTR_DT_CHAR, 0, 0, FALSE, FSDB_BDT_GENERIC);
+    lpid_attr                                   = __CreateAttr(ffw_obj, "lpid_attr                                ", FSDB_ATTR_DT_CHAR, 0, 0, FALSE, FSDB_BDT_GENERIC);
+    excl_snoopme_attr                           = __CreateAttr(ffw_obj, "excl_snoopme_attr                        ", FSDB_ATTR_DT_BOOL, 0, 0, FALSE, FSDB_BDT_GENERIC);
+    expcompack_attr                             = __CreateAttr(ffw_obj, "expcompack_attr                          ", FSDB_ATTR_DT_BOOL, 0, 0, FALSE, FSDB_BDT_GENERIC);
+    tracetag_attr                               = __CreateAttr(ffw_obj, "tracetag_attr                            ", FSDB_ATTR_DT_CHAR, 0, 0, FALSE, FSDB_BDT_GENERIC);
+    resperr_attr                                = __CreateAttr(ffw_obj, "resperr_attr                             ", FSDB_ATTR_DT_CHAR, 0, 0, FALSE, FSDB_BDT_GENERIC);
+    resp_attr                                   = __CreateAttr(ffw_obj, "resp_attr                                ", FSDB_ATTR_DT_CHAR, 0, 0, FALSE, FSDB_BDT_GENERIC);
+    fwdstate_datapull_datasource_attr           = __CreateAttr(ffw_obj, "fwdstate_datapull_datasource_attr        ", FSDB_ATTR_DT_CHAR, 0, 0, FALSE, FSDB_BDT_GENERIC);
+    dbid_attr                                   = __CreateAttr(ffw_obj, "dbid_attr                                ", FSDB_ATTR_DT_INT32, 0, 0, FALSE, FSDB_BDT_GENERIC);
+    donotgotosd_donotdatapull_attr              = __CreateAttr(ffw_obj, "donotgotosd_donotdatapull_attr           ", FSDB_ATTR_DT_CHAR, 0, 0, FALSE, FSDB_BDT_GENERIC);
+    rettosrc_attr                               = __CreateAttr(ffw_obj, "rettosrc_attr                            ", FSDB_ATTR_DT_CHAR, 0, 0, FALSE, FSDB_BDT_GENERIC);
+    homenid_attr                                = __CreateAttr(ffw_obj, "homenid_attr                             ", FSDB_ATTR_DT_CHAR, 0, 0, FALSE, FSDB_BDT_GENERIC);
+    ccid_attr                                   = __CreateAttr(ffw_obj, "ccid_attr                                ", FSDB_ATTR_DT_CHAR, 0, 0, FALSE, FSDB_BDT_GENERIC);
+    be_attr                                     = __CreateAttr(ffw_obj, "be_attr                                  ", FSDB_ATTR_DT_INT64, 0, 0, FALSE, FSDB_BDT_GENERIC);
+    data_attr                                   = __CreateAttr(ffw_obj, "data_attr                                ", FSDB_ATTR_DT_INT64, 0, 0, FALSE, FSDB_BDT_GENERIC);
+    data_check_attr                             = __CreateAttr(ffw_obj, "data_check_attr                          ", FSDB_ATTR_DT_INT64, 0, 0, FALSE, FSDB_BDT_GENERIC);
+    poison_attr                                 = __CreateAttr(ffw_obj, "poison_attr                              ", FSDB_ATTR_DT_CHAR, 0, 0, FALSE, FSDB_BDT_GENERIC);
 
     ffw_EndTree(ffw_obj);
 }
 
 fsdbTransId
-__WriteOneRspFlit(ffwObject* ffw_obj, *rspFlit rspflit, *fsdbStreamHdl rsp_stream)
+__WriteOneRspFlit(ffwObject* ffw_obj, rspFlit *rspflit, fsdbStreamHdl rsp_stream)
 {
     fsdbTag64       xtag;
     fsdbAttrHdlVal  aphase_val[9];
-    fsdbTransId     aphase_trans;
+    fsdbTransId     rsp_trans;
+    fsdbXTag btime, etime;
 
     aphase_val[0].hdl   = tgtid_attr;
     aphase_val[0].value = (byte_T *)&(rspflit->tgtid);
     aphase_val[1].hdl   = srcid_attr;
     aphase_val[1].value = (byte_T *)&(rspflit->srcid);
     aphase_val[2].hdl   = txnid_attr;
-    aphase_val[2].value = (byte_T *)&(rspflt->txnid);
+    aphase_val[2].value = (byte_T *)&(rspflit->txnid);
     aphase_val[3].hdl   = opcode_attr;
     aphase_val[3].value = (byte_T *)&(rspflit->opcode);
     aphase_val[4].hdl   = resperr_attr;
     aphase_val[4].value = (byte_T *)&(rspflit->resperr);
-    aphase_val[5].hdl   = resp;
+    aphase_val[5].hdl   = resp_attr;
     aphase_val[5].value = (byte_T *)&(rspflit->resp);
     aphase_val[6].hdl   = fwdstate_datapull_datasource_attr;
-    aphase_val[6].value = (byte_T *)&(rspflit->fwdstate_datafull_datasouce_cf);
+    aphase_val[6].value = (byte_T *)&(rspflit->fwdstate_datapull_datasource_cf);
     aphase_val[7].hdl   = dbid_attr;
     aphase_val[7].value = (byte_T *)&(rspflit->dbid);
     aphase_val[8].hdl   = pcrdtype_attr;
@@ -367,28 +376,29 @@ __WriteOneRspFlit(ffwObject* ffw_obj, *rspFlit rspflit, *fsdbStreamHdl rsp_strea
 
 
 fsdbTransId
-__WriteOneDatFlit(ffwObject* ffw_obj, *datFlit datflit, *fsdbStreamHdl dat_stream)
+__WriteOneDatFlit(ffwObject* ffw_obj, datFlit *datflit, fsdbStreamHdl dat_stream)
 {
     fsdbTag64       xtag;
     fsdbAttrHdlVal  aphase_val[13];
-    fsdbTransId     aphase_trans;
+    fsdbTransId     dat_trans;
+    fsdbXTag btime, etime;
 
     aphase_val[0].hdl   = tgtid_attr;
     aphase_val[0].value = (byte_T *)&(datflit->tgtid);
     aphase_val[1].hdl   = srcid_attr;
     aphase_val[1].value = (byte_T *)&(datflit->srcid);
     aphase_val[2].hdl   = txnid_attr;
-    aphase_val[2].value = (byte_T *)&(rspflt->txnid);
+    aphase_val[2].value = (byte_T *)&(datflit->txnid);
     aphase_val[3].hdl   = homenid_attr;
     aphase_val[3].value = (byte_T *)&(datflit->homenid);
     aphase_val[3].hdl   = opcode_attr;
     aphase_val[3].value = (byte_T *)&(datflit->opcode);
     aphase_val[4].hdl   = resperr_attr;
     aphase_val[4].value = (byte_T *)&(datflit->resperr);
-    aphase_val[5].hdl   = resp;
+    aphase_val[5].hdl   = resp_attr;
     aphase_val[5].value = (byte_T *)&(datflit->resp);
     aphase_val[6].hdl   = fwdstate_datapull_datasource_attr;
-    aphase_val[6].value = (byte_T *)&(datflit->fwdstate_datafull_datasouce_cf);
+    aphase_val[6].value = (byte_T *)&(datflit->fwdstate_datapull_datasource_cf);
     aphase_val[7].hdl   = dbid_attr;
     aphase_val[7].value = (byte_T *)&(datflit->dbid);
     aphase_val[7].hdl   = ccid_attr;
@@ -398,7 +408,7 @@ __WriteOneDatFlit(ffwObject* ffw_obj, *datFlit datflit, *fsdbStreamHdl dat_strea
     aphase_val[8].hdl   = be_attr;
     aphase_val[8].value = (byte_T *)&(datflit->be);
     aphase_val[8].hdl   = data_attr;
-    aphase_val[8].value = (byte_T *)&(datflit->data;
+    aphase_val[8].value = (byte_T *)&(datflit->data);
 
     btime.hltag.H = 0;
     btime.hltag.L = datflit->time;
@@ -423,28 +433,17 @@ __WriteOneDatFlit(ffwObject* ffw_obj, *datFlit datflit, *fsdbStreamHdl dat_strea
 }
 
 fsdbTransId
-__WriteOneSnpFlit(ffwObject* ffw_obj, *snpFlit snpflit, *fsdbStreamHdl snp_stream)
+__WriteOneSnpFlit(ffwObject* ffw_obj, snpFlit *snpflit, fsdbStreamHdl snp_stream)
 {
     fsdbTag64       xtag;
     fsdbAttrHdlVal  aphase_val[11];
-    fsdbTransId     aphase_trans;
-
-    uint16_t    srcid;
-    uint16_t    txnid;
-    uint16_t    fwdnid;
-    uint16_t    fwdtxnid;
-    uint8_t     opcode;
-    uint64_t    addr;
-    bool        ns;
-    bool        donotgotosd;
-    bool        rettosrc;
-    bool        tracetag;
-    uint16_t    mpam;
+    fsdbTransId     snp_trans;
+    fsdbXTag btime, etime;
 
     aphase_val[1].hdl   = srcid_attr;
     aphase_val[1].value = (byte_T *)&(snpflit->srcid);
     aphase_val[2].hdl   = txnid_attr;
-    aphase_val[2].value = (byte_T *)&(rspflt->txnid);
+    aphase_val[2].value = (byte_T *)&(snpflit->txnid);
     aphase_val[3].hdl   = fwdnid_attr;
     aphase_val[3].value = (byte_T *)&(snpflit->fwdnid);
     aphase_val[3].hdl   = fwdtxnid_attr;
@@ -473,14 +472,14 @@ __WriteOneSnpFlit(ffwObject* ffw_obj, *snpFlit snpflit, *fsdbStreamHdl snp_strea
     xtag.L = btime.hltag.L;
     ffw_CreateXCoorByHnL(ffw_obj, xtag.H, xtag.L);
     snp_trans = ffw_BeginTransaction(ffw_obj, snp_stream, btime,
-                                        "aphase", NULL, 0);
+                                        "snp", NULL, 0);
     if (FSDB_INVALID_TRANS_ID == snp_trans) {
         fprintf(stderr, "snp fails during begin!\n");
     }
 
     if (FSDB_RC_SUCCESS !=
         ffw_EndTransaction(ffw_obj, snp_trans, etime, aphase_val, 11)) {
-        fprintf(stderr, "aphase fails during end!\n");
+        fprintf(stderr, "snp during end!\n");
     }
 
     return snp_trans;
@@ -492,6 +491,7 @@ __WriteOneReqFlit(ffwObject* ffw_obj, reqFlit *reqflit)
     fsdbTag64       xtag;
     fsdbAttrHdlVal  dphase_val[22];
     fsdbTransId     req_trans;
+    fsdbXTag btime, etime;
 
     dphase_val[0].hdl   = qos_attr;
     dphase_val[0].value = (byte_T *)&(reqflit->qos);
@@ -540,9 +540,6 @@ __WriteOneReqFlit(ffwObject* ffw_obj, reqFlit *reqflit)
     dphase_val[22].hdl   = returnnid_stashnid_attr;
     dphase_val[22].value = (byte_T *)&(reqflit->return_stashnid_cf);
 
-    fsdbXTag btime;
-    fsdbXTag etime;
-
     btime.hltag.H = 0;
     btime.hltag.L = reqflit->time;
     etime.hltag.H = 0;
@@ -551,56 +548,56 @@ __WriteOneReqFlit(ffwObject* ffw_obj, reqFlit *reqflit)
     xtag.H = btime.hltag.H;
     xtag.L = btime.hltag.L;
     ffw_CreateXCoorByHnL(ffw_obj, xtag.H, xtag.L);
-    dphase_trans = ffw_BeginTransaction(ffw_obj, dphase_stream, btime,
+    req_trans = ffw_BeginTransaction(ffw_obj, req_stream, btime,
                                         "dphase", NULL, 0);
-    if (FSDB_INVALID_TRANS_ID == dphase_trans) {
+    if (FSDB_INVALID_TRANS_ID == req_trans) {
         fprintf(stderr, "dphase fails during begin!\n");
     }
 
     if (FSDB_RC_SUCCESS !=
-        ffw_EndTransaction(ffw_obj, dphase_trans, etime, dphase_val, 5)) {
+        ffw_EndTransaction(ffw_obj, req_trans, etime, dphase_val, 5)) {
         fprintf(stderr, "dphase fails during end!\n");
     }
 
-    return dphase_trans;
+    return req_trans;
 }
 
 fsdbTransId
-__WriteOneReqTracker(ffwObject* ffw_obj, fsdbXTag btime, fsdbXTag etime,
-                   str_T cmd, uint_T addr, uint_T data, uint_T size,
-                   str_T resp, str_T master, str_T slave)
+__WriteOneReqTracker(ffwObject* ffw_obj, reqFlit *reqflit, rspFlit *rspflit)
 {
     fsdbTag64       xtag;
-    fsdbAttrHdlVal  tr_val[7];
+    fsdbAttrHdlVal  tr_val[5];
     fsdbTransId     tr_trans;
+    fsdbXTag btime, etime;
 
-    tr_val[0].hdl   = cmd_attr;
-    tr_val[0].value = (byte_T *)&cmd;
+    tr_val[0].hdl   = opcode_attr;
+    tr_val[0].value = (byte_T *)&(reqflit->opcode);
     tr_val[1].hdl   = addr_attr;
-    tr_val[1].value = (byte_T *)&addr;
-    tr_val[2].hdl   = data_attr;
-    tr_val[2].value = (byte_T *)&data;
-    tr_val[3].hdl   = size_attr;
-    tr_val[3].value = (byte_T *)&size;
-    tr_val[4].hdl   = resp_attr;
-    tr_val[4].value = (byte_T *)&resp;
-    tr_val[5].hdl   = master_attr;
-    tr_val[5].value = (byte_T *)&master;
-    tr_val[6].hdl   = slave_attr;
-    tr_val[6].value = (byte_T *)&slave;
+    tr_val[1].value = (byte_T *)&(reqflit->addr);
+    tr_val[2].hdl   = size_attr;
+    tr_val[2].value = (byte_T *)&(reqflit->size);
+    tr_val[3].hdl   = txnid_attr;
+    tr_val[3].value = (byte_T *)&(reqflit->txnid);
+    tr_val[4].hdl   = dbid_attr;
+    tr_val[4].value = (byte_T *)&(rspflit->dbid);
+
+    btime.hltag.H = 0;
+    btime.hltag.L = reqflit->time;
+    etime.hltag.H = 0;
+    etime.hltag.L = rspflit->time + 1;
 
     xtag.H = btime.hltag.H;
     xtag.L = btime.hltag.L;
     ffw_CreateXCoorByHnL(ffw_obj, xtag.H, xtag.L);
-    tr_trans = ffw_BeginTransaction(ffw_obj, transfer_stream, btime,
-                                        "transfer", NULL, 0);
+    tr_trans = ffw_BeginTransaction(ffw_obj, reqtracker_stream, btime,
+                                        "reqtracker", NULL, 0);
     if (FSDB_INVALID_TRANS_ID == tr_trans) {
-        fprintf(stderr, "transfer fails during begin!\n");
+        fprintf(stderr, "reqtracker fails during begin!\n");
     }
 
     if (FSDB_RC_SUCCESS !=
-        ffw_EndTransaction(ffw_obj, tr_trans, etime, tr_val, 7)) {
-        fprintf(stderr, "transfer fails during end!\n");
+        ffw_EndTransaction(ffw_obj, tr_trans, etime, tr_val, 5)) {
+        fprintf(stderr, "reqtracker fails during end!\n");
     }
 
     return tr_trans;
@@ -611,184 +608,58 @@ __WriteOneReqTracker(ffwObject* ffw_obj, fsdbXTag btime, fsdbXTag etime,
 void
 __CreateVC(ffwObject* ffw_obj)
 {
-    fsdbTag64       xtag;
-    fsdbXTag        time;
-    fsdbXTag        btime;
-    fsdbXTag        etime;
-    fsdbAttrHdlVal  aphase_val[5];
-    fsdbAttrHdlVal  dphase_val[5];
+    reqFlit reqflit;
+    rspFlit rspflit;
 
-    str_T           cmd;
-    str_T           master, slave, resp;
-    uint_T          addr, data, size;
+    fsdbTransId     reqtracker_trans, req_trans, rsp_trans;
 
-    fsdbTransId     aphase_trans, dphase_trans, tr_trans;
     fsdbRelationHdl relation1 = ffw_CreateRelation(ffw_obj, "parent-child");
 
     // transfer 1
-    cmd = "burst read(noseq)";
-    addr = 0x20;
-    data = 0x11223344;
-    size = 4;
-    master = "CPU";
-    slave = "MEM_CTRL";
-    resp = "OKAY";
+    reqflit.time = 100;
+    reqflit.opcode = 0x14;
+    reqflit.addr = 0x800000000;
+    reqflit.txnid = 0x01;
 
-    btime.hltag.H       = 0;
-    btime.hltag.L       = 100;
-    etime.hltag.H       = 0;
-    etime.hltag.L       = 200;
-    aphase_trans = __WriteOneAphase(ffw_obj, btime, etime, cmd, addr, size, master, slave);
+    rspflit.time = 300;
+    rspflit.txnid = 0x01;
+    rspflit.dbid = 0x80;
 
-    btime.hltag.H       = 0;
-    btime.hltag.L       = 200;
-    etime.hltag.H       = 0;
-    etime.hltag.L       = 300;
-    dphase_trans = __WriteOneDphase(ffw_obj, btime, etime, data, size, resp, master, slave);
+    req_trans = __WriteOneReqFlit(ffw_obj, &reqflit);
 
-    btime.hltag.H       = 0;
-    btime.hltag.L       = 100;
-    etime.hltag.H       = 0;
-    etime.hltag.L       = 300;
-    tr_trans = __WriteOneTransfer(ffw_obj, btime, etime, cmd, addr, data,
-                                  size, resp, master, slave);
+    rsp_trans = __WriteOneRspFlit(ffw_obj, &rspflit, rxrsp_stream);
 
-    ffw_AddRelation(ffw_obj, relation1, aphase_trans, tr_trans);
-    ffw_AddRelation(ffw_obj, relation1, dphase_trans, tr_trans);
-    ffw_AddRelation(ffw_obj, relation1, tr_trans, aphase_trans);
-    ffw_AddRelation(ffw_obj, relation1, tr_trans, dphase_trans);
+    reqtracker_trans = __WriteOneReqTracker(ffw_obj, &reqflit, &rspflit);
+
+    ffw_AddRelation(ffw_obj, relation1, req_trans, rsp_trans);
+    ffw_AddRelation(ffw_obj, relation1, req_trans, reqtracker_trans);
+    ffw_AddRelation(ffw_obj, relation1, rsp_trans, reqtracker_trans);
+    ffw_AddRelation(ffw_obj, relation1, reqtracker_trans, req_trans);
+    ffw_AddRelation(ffw_obj, relation1, reqtracker_trans, rsp_trans);
+
 
     // transfer 2
-    cmd = "burst read(seq)";
-    addr = 0x24;
-    data = 0x55667788;
-    size = 4;
-    master = "CPU";
-    slave = "MEM_CTRL";
-    resp = "OKAY";
+    reqflit.time = 500;
+    reqflit.opcode = 0x14;
+    reqflit.addr = 0x900000000;
+    reqflit.txnid = 0x01;
 
-    btime.hltag.H       = 0;
-    btime.hltag.L       = 200;
-    etime.hltag.H       = 0;
-    etime.hltag.L       = 300;
-    aphase_trans = __WriteOneAphase(ffw_obj, btime, etime, cmd, addr, size, master, slave);
+    rspflit.time = 600;
+    rspflit.txnid = 0x01;
+    rspflit.dbid = 0x80;
 
-    btime.hltag.H       = 0;
-    btime.hltag.L       = 300;
-    etime.hltag.H       = 0;
-    etime.hltag.L       = 400;
-    dphase_trans = __WriteOneDphase(ffw_obj, btime, etime, data, size, resp, master, slave);
+    req_trans = __WriteOneReqFlit(ffw_obj, &reqflit);
 
-    btime.hltag.H       = 0;
-    btime.hltag.L       = 200;
-    etime.hltag.H       = 0;
-    etime.hltag.L       = 400;
-    tr_trans = __WriteOneTransfer(ffw_obj, btime, etime, cmd, addr, data,
-                                  size, resp, master, slave);
+    rsp_trans = __WriteOneRspFlit(ffw_obj, &rspflit, rxrsp_stream);
 
-    ffw_AddRelation(ffw_obj, relation1, aphase_trans, tr_trans);
-    ffw_AddRelation(ffw_obj, relation1, dphase_trans, tr_trans);
-    ffw_AddRelation(ffw_obj, relation1, tr_trans, aphase_trans);
-    ffw_AddRelation(ffw_obj, relation1, tr_trans, dphase_trans);
+    reqtracker_trans = __WriteOneReqTracker(ffw_obj, &reqflit, &rspflit);
 
-    // transfer 3
-    cmd = "burst read(seq)";
-    addr = 0x28;
-    data = 0x99aabbcc;
-    size = 4;
-    master = "CPU";
-    slave = "MEM_CTRL";
-    resp = "OKAY";
+    ffw_AddRelation(ffw_obj, relation1, req_trans, rsp_trans);
+    ffw_AddRelation(ffw_obj, relation1, req_trans, reqtracker_trans);
+    ffw_AddRelation(ffw_obj, relation1, rsp_trans, reqtracker_trans);
+    ffw_AddRelation(ffw_obj, relation1, reqtracker_trans, req_trans);
+    ffw_AddRelation(ffw_obj, relation1, reqtracker_trans, rsp_trans);
 
-    btime.hltag.H       = 0;
-    btime.hltag.L       = 300;
-    etime.hltag.H       = 0;
-    etime.hltag.L       = 400;
-    aphase_trans = __WriteOneAphase(ffw_obj, btime, etime, cmd, addr, size, master, slave);
-
-    btime.hltag.H       = 0;
-    btime.hltag.L       = 400;
-    etime.hltag.H       = 0;
-    etime.hltag.L       = 800;
-    dphase_trans = __WriteOneDphase(ffw_obj, btime, etime, data, size, resp, master, slave);
-
-    btime.hltag.H       = 0;
-    btime.hltag.L       = 300;
-    etime.hltag.H       = 0;
-    etime.hltag.L       = 800;
-    tr_trans = __WriteOneTransfer(ffw_obj, btime, etime, cmd, addr, data,
-                                  size, resp, master, slave);
-
-    ffw_AddRelation(ffw_obj, relation1, aphase_trans, tr_trans);
-    ffw_AddRelation(ffw_obj, relation1, dphase_trans, tr_trans);
-    ffw_AddRelation(ffw_obj, relation1, tr_trans, aphase_trans);
-    ffw_AddRelation(ffw_obj, relation1, tr_trans, dphase_trans);
-
-    // transfer 4
-    cmd = "burst read(seq)";
-    addr = 0x2c;
-    data = 0xddeeff00;
-    size = 4;
-    master = "CPU";
-    slave = "MEM_CTRL";
-    resp = "OKAY";
-
-    btime.hltag.H       = 0;
-    btime.hltag.L       = 400;
-    etime.hltag.H       = 0;
-    etime.hltag.L       = 800;
-    aphase_trans = __WriteOneAphase(ffw_obj, btime, etime, cmd, addr, size, master, slave);
-
-    btime.hltag.H       = 0;
-    btime.hltag.L       = 800;
-    etime.hltag.H       = 0;
-    etime.hltag.L       = 900;
-    dphase_trans = __WriteOneDphase(ffw_obj, btime, etime, data, size, resp, master, slave);
-
-    btime.hltag.H       = 0;
-    btime.hltag.L       = 400;
-    etime.hltag.H       = 0;
-    etime.hltag.L       = 900;
-    tr_trans = __WriteOneTransfer(ffw_obj, btime, etime, cmd, addr, data,
-                                  size, resp, master, slave);
-
-    ffw_AddRelation(ffw_obj, relation1, aphase_trans, tr_trans);
-    ffw_AddRelation(ffw_obj, relation1, dphase_trans, tr_trans);
-    ffw_AddRelation(ffw_obj, relation1, tr_trans, aphase_trans);
-    ffw_AddRelation(ffw_obj, relation1, tr_trans, dphase_trans);
-
-    // transfer 5
-    cmd = "single write";
-    addr = 0x80000000;
-    data = 0xaabbccdd;
-    size = 4;
-    master = "CPU";
-    slave = "APB_BRIDGE";
-    resp = "OKAY";
-
-    btime.hltag.H       = 0;
-    btime.hltag.L       = 1200;
-    etime.hltag.H       = 0;
-    etime.hltag.L       = 1300;
-    aphase_trans = __WriteOneAphase(ffw_obj, btime, etime, cmd, addr, size, master, slave);
-
-    btime.hltag.H       = 0;
-    btime.hltag.L       = 1300;
-    etime.hltag.H       = 0;
-    etime.hltag.L       = 1500;
-    dphase_trans = __WriteOneDphase(ffw_obj, btime, etime, data, size, resp, master, slave);
-
-    btime.hltag.H       = 0;
-    btime.hltag.L       = 1200;
-    etime.hltag.H       = 0;
-    etime.hltag.L       = 1500;
-    tr_trans = __WriteOneTransfer(ffw_obj, btime, etime, cmd, addr, data,
-                                  size, resp, master, slave);
-
-    ffw_AddRelation(ffw_obj, relation1, aphase_trans, tr_trans);
-    ffw_AddRelation(ffw_obj, relation1, dphase_trans, tr_trans);
-    ffw_AddRelation(ffw_obj, relation1, tr_trans, aphase_trans);
-    ffw_AddRelation(ffw_obj, relation1, tr_trans, dphase_trans);
 }
 
 //
@@ -823,9 +694,9 @@ __CreateBusInfo(ffwObject* ffw_obj)
     ffw_SetBusClock(ffw_obj, bus, "/system/hclk", FSDB_CLOCK_POSEDGE);
 
     // Add streams to bus
-    ffw_AddBusStream(ffw_obj, bus, aphase_stream);
-    ffw_AddBusStream(ffw_obj, bus, dphase_stream);
-    ffw_AddBusStream(ffw_obj, bus, transfer_stream);
+    ffw_AddBusStream(ffw_obj, bus, reqtracker_stream);
+    ffw_AddBusStream(ffw_obj, bus, req_stream);
+    ffw_AddBusStream(ffw_obj, bus, rxrsp_stream);
 
     // Set bus parameters
     ffw_AddBusParameter(ffw_obj, bus, "ADDR_WIDTH", "32");
