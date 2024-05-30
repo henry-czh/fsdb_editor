@@ -6,3 +6,8 @@ fsdb_reader/*.out
 fsdb_reader/fsdb_reader
 fsdb_reader/read_verilog
 fsdb_reader/chi_analyzer.dat
+
+zgd_test/verdiLog/
+zgd_test/*.fsdb
+zgd_test/novas.*
+zgd_test/xxx
