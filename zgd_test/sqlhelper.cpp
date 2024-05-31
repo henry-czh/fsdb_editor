@@ -1,12 +1,17 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <map>
+
 #include <sqlite3.h>
 #include "ffwAPI.h"
 #include "zgd.h"
 
+using namespace std;
+
 extern ffwObject* fsdb_obj;
-extern fsdbTag64  time;
+extern fsdbTag64  g_time;
+extern map<string, BusSignal*> sigs;
 extern BusSignal  txnid_sig;
 extern BusSignal  srcid_sig;
 
@@ -17,20 +22,20 @@ static int callback(void *data, int col_count, char** col_values, char** col_nam
         const char* col_value = col_values[i] ? col_values[i] : "NULL";
         // printf("%s = %s\n", col_names[i], col_value);
         if (col_value && !strcmp("time", col_names[i])) {
-            time.L = atoi(col_value);
-            // printf("%s = %d\n", col_names[i], time.L);
+            g_time.L = atoi(col_value);
+            // printf("%s = %d\n", col_names[i], g_time.L);
         }
 
         if (col_value && !strcmp("txnid", col_names[i])) {
             // printf("%s = %s\n", col_names[i], col_value);
-            SetSig(fsdb_obj, &txnid_sig, time, atoi(col_value));
+            // SetSig(fsdb_obj, sigs["txnid"], g_time, atoi(col_value));
+            SetSig(fsdb_obj, &txnid_sig, g_time, atoi(col_value));
         }
 
-        if (col_value && !strcmp("srcid", col_names[i])) {
-            // printf("%s = %s\n", col_names[i], col_value);
-            SetSig(fsdb_obj, &srcid_sig, time, atoi(col_value));
-        }
-        
+        // if (col_value && !strcmp("srcid", col_names[i])) {
+        //     // printf("%s = %s\n", col_names[i], col_value);
+        //     SetSig(fsdb_obj, &srcid_sig, g_time, atoi(col_value));
+        // }
     }
     // printf("\n");
     return 0;

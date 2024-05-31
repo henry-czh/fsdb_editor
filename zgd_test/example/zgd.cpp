@@ -16,12 +16,18 @@
 
 #undef NOVAS_FSDB
 
-#include "stdio.h"
-#include "string.h"
-#include "stdlib.h"
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+
+#include <map>
+
 #include "ffwAPI.h"
 #include "sqlhelper.h"
 #include "zgd.h"
+
+using namespace std;
+map<string, BusSignal*> sigs;
 
 BusSignal txnid_sig = {
     (str_T)"txnid",
@@ -43,7 +49,7 @@ BusSignal srcid_sig = {
 
 ffwVarMapId vm_id;
 ffwObject   *fsdb_obj;
-fsdbTag64   time;
+fsdbTag64   g_time;
 
 //
 // bit_size     = ABS(lbitnum - rbitnum) + 1, the maximum bit size is FSDB_MAX_BIT_SIZE
@@ -86,8 +92,21 @@ void SetValue(byte_T* value, int n, int v)
     }
 }
 
-void AddSig(BusSignal* sig)
+void AddWireSig(str_T name)
 {
+    BusSignal* sig = &txnid_sig;
+    // BusSignal* sig = new BusSignal();
+    // sig->name = name;
+    // sig->type = FSDB_VT_VCD_WIRE,
+    // sig->lbitnum = 18,
+    // sig->rbitnum = 25,
+    // sig->bpb = FSDB_BYTES_PER_BIT_1B,
+    // sig->value = NULL;
+
+    printf("mmm1\n");
+    sigs[name] = sig;
+    printf("mmm2\n");
+
     vm_id = ffw_CreateVarByHandle(fsdb_obj, sig->type,
                         FSDB_VD_OUTPUT, FSDB_DT_HANDLE_VERILOG_STANDARD,
                         sig->lbitnum, sig->rbitnum, sig,
@@ -100,15 +119,17 @@ void AddSig(BusSignal* sig)
     printf("bitSize[%d] byte_count[%d]\n", vm_id->bitSize, sig->byte_count);
 }
 
-void SetSig(ffwObject* fsdb_obj, BusSignal* sig, fsdbTag64 time, int value)
+void SetSig(ffwObject* fsdb_obj, BusSignal* sig, fsdbTag64 g_time, int value)
 {
-    ffw_CreateXCoorByHnL(fsdb_obj, time.H, time.L);
+    ffw_CreateXCoorByHnL(fsdb_obj, g_time.H, g_time.L);
     SetValue(sig->value, sig->byte_count, value);
     ffw_CreateVarValueByHandle(fsdb_obj, sig, sig->value);
 }
 
 int main(int argc, str_T argv[])
 {
+    // sigs.clear();
+
     int         bus_vc_count = 36;
     str_T       env_ptr;
     int         i, j;
@@ -135,8 +156,7 @@ int main(int argc, str_T argv[])
     ffw_CreateScope(fsdb_obj, FSDB_ST_VCD_MODULE, (str_T)"top");
     ffw_CreateScope(fsdb_obj, FSDB_ST_VCD_MODULE, (str_T)"scope"); //用 xxx.yyy 并没有用
 
-    AddSig(&txnid_sig);
-    AddSig(&srcid_sig);
+    AddWireSig((str_T)"txnid");
 
     ffw_EndTree(fsdb_obj);
 
