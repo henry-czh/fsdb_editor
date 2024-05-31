@@ -28,8 +28,8 @@ static int callback(void *data, int col_count, char** col_values, char** col_nam
 
         if (col_value && !strcmp("txnid", col_names[i])) {
             // printf("%s = %s\n", col_names[i], col_value);
-            // SetSig(fsdb_obj, sigs["txnid"], g_time, atoi(col_value));
-            SetSig(fsdb_obj, &txnid_sig, g_time, atoi(col_value));
+            SetSig(fsdb_obj, sigs["txnid"], g_time, atoi(col_value));
+            // SetSig(fsdb_obj, &txnid_sig, g_time, atoi(col_value));
         }
 
         // if (col_value && !strcmp("srcid", col_names[i])) {

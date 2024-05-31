@@ -94,18 +94,15 @@ void SetValue(byte_T* value, int n, int v)
 
 void AddWireSig(str_T name)
 {
-    BusSignal* sig = &txnid_sig;
-    // BusSignal* sig = new BusSignal();
-    // sig->name = name;
-    // sig->type = FSDB_VT_VCD_WIRE,
-    // sig->lbitnum = 18,
-    // sig->rbitnum = 25,
-    // sig->bpb = FSDB_BYTES_PER_BIT_1B,
-    // sig->value = NULL;
+    BusSignal* sig = new BusSignal();
+    sig->name = name;
+    sig->type = FSDB_VT_VCD_WIRE,
+    sig->lbitnum = 18,
+    sig->rbitnum = 25,
+    sig->bpb = FSDB_BYTES_PER_BIT_1B,
+    sig->value = NULL;
 
-    printf("mmm1\n");
     sigs[name] = sig;
-    printf("mmm2\n");
 
     vm_id = ffw_CreateVarByHandle(fsdb_obj, sig->type,
                         FSDB_VD_OUTPUT, FSDB_DT_HANDLE_VERILOG_STANDARD,
