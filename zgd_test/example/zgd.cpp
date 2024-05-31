@@ -41,10 +41,9 @@ BusSignal srcid_sig = {
     NULL
 };
 
-
-#define ARR_DIM(a)                (sizeof(a)/sizeof(a[0]))
-
-
+ffwVarMapId vm_id;
+ffwObject   *fsdb_obj;
+fsdbTag64   time;
 
 //
 // bit_size     = ABS(lbitnum - rbitnum) + 1, the maximum bit size is FSDB_MAX_BIT_SIZE
@@ -87,6 +86,20 @@ void SetValue(byte_T* value, int n, int v)
     }
 }
 
+void AddSig(BusSignal* sig)
+{
+    vm_id = ffw_CreateVarByHandle(fsdb_obj, sig->type,
+                        FSDB_VD_OUTPUT, FSDB_DT_HANDLE_VERILOG_STANDARD,
+                        sig->lbitnum, sig->rbitnum, sig,
+                        sig->name, (fsdbBytesPerBit)sig->bpb);
+    if (NULL == vm_id) {
+        printf("failed to create a var(%s)\n", sig->name);
+        exit(0);
+    }
+    sig->value = AllocateMemory(vm_id->bitSize, (fsdbBytesPerBit)sig->bpb, sig->byte_count);
+    printf("bitSize[%d] byte_count[%d]\n", vm_id->bitSize, sig->byte_count);
+}
+
 void SetSig(ffwObject* fsdb_obj, BusSignal* sig, fsdbTag64 time, int value)
 {
     ffw_CreateXCoorByHnL(fsdb_obj, time.H, time.L);
@@ -94,15 +107,11 @@ void SetSig(ffwObject* fsdb_obj, BusSignal* sig, fsdbTag64 time, int value)
     ffw_CreateVarValueByHandle(fsdb_obj, sig, sig->value);
 }
 
-ffwObject   *fsdb_obj;
-fsdbTag64   time;
-
 int main(int argc, str_T argv[])
 {
     int         bus_vc_count = 36;
     str_T       env_ptr;
     int         i, j;
-    ffwVarMapId vm_id;
 
     env_ptr = getenv("BUS_VC_COUNT");
     if (NULL != env_ptr)
@@ -126,26 +135,8 @@ int main(int argc, str_T argv[])
     ffw_CreateScope(fsdb_obj, FSDB_ST_VCD_MODULE, (str_T)"top");
     ffw_CreateScope(fsdb_obj, FSDB_ST_VCD_MODULE, (str_T)"scope"); //用 xxx.yyy 并没有用
 
-    vm_id = ffw_CreateVarByHandle(fsdb_obj, txnid_sig.type,
-                        FSDB_VD_OUTPUT, FSDB_DT_HANDLE_VERILOG_STANDARD,
-                        txnid_sig.lbitnum, txnid_sig.rbitnum, &txnid_sig,
-                        txnid_sig.name, (fsdbBytesPerBit)txnid_sig.bpb);
-    if (NULL == vm_id) {
-        printf("failed to create a var(%s)\n", txnid_sig.name);
-        exit(0);
-    }
-    txnid_sig.value = AllocateMemory(vm_id->bitSize, (fsdbBytesPerBit)txnid_sig.bpb, txnid_sig.byte_count);
-    printf("bitSize[%d] byte_count[%d]\n", vm_id->bitSize, txnid_sig.byte_count);
-
-    vm_id = ffw_CreateVarByHandle(fsdb_obj, srcid_sig.type,
-                        FSDB_VD_OUTPUT, FSDB_DT_HANDLE_VERILOG_STANDARD,
-                        srcid_sig.lbitnum, srcid_sig.rbitnum, &srcid_sig,
-                        srcid_sig.name, (fsdbBytesPerBit)srcid_sig.bpb);
-    if (NULL == vm_id) {
-        printf("failed to create a var(%s)\n", srcid_sig.name);
-        exit(0);
-    }
-    srcid_sig.value = AllocateMemory(vm_id->bitSize, (fsdbBytesPerBit)srcid_sig.bpb, srcid_sig.byte_count);
+    AddSig(&txnid_sig);
+    AddSig(&srcid_sig);
 
     ffw_EndTree(fsdb_obj);
 
