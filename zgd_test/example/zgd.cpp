@@ -81,7 +81,7 @@ static byte_T* AllocateMemory(ushort_T bit_size, fsdbBytesPerBit bpb, uint_T &by
 void SetValue(byte_T* value, int n, int v)
 {
     while(n--) {
-        value[n] = v & 1;
+        value[n] = v & 1; //FSDB_BT_VCD_1
         v = v >> 1;
     }
 }
@@ -163,38 +163,28 @@ int main(int argc, str_T argv[])
     //
     time.H = 0;
     time.L = 10;
-    ffw_CreateXCoorByHnL(fsdb_obj, time.H, time.L);
-
-    ffw_CreateVarValueByHandle(fsdb_obj, (fsdbVarHandle)&small_bus_sig, 
-                               small_bus_sig.value);
+    SetSig(fsdb_obj, time, 0);
 
     //
     // create the time(xtag)
     //
     time.L++;
-    ffw_CreateXCoorByHnL(fsdb_obj, time.H, time.L);
-    SetValue(small_bus_sig.value, small_bus_sig.byte_count, 1);
-    ffw_CreateVarValueByHandle(fsdb_obj, (fsdbVarHandle)&small_bus_sig, small_bus_sig.value);
+    SetSig(fsdb_obj, time, 1);
 
     time.L++;
-    ffw_CreateXCoorByHnL(fsdb_obj, time.H, time.L);
-    SetValue(small_bus_sig.value, small_bus_sig.byte_count, 2);
-    ffw_CreateVarValueByHandle(fsdb_obj, (fsdbVarHandle)&small_bus_sig, small_bus_sig.value);
-
-    time.L += 2;
-    ffw_CreateXCoorByHnL(fsdb_obj, time.H, time.L);
-    SetValue(small_bus_sig.value, small_bus_sig.byte_count, 3);
-    ffw_CreateVarValueByHandle(fsdb_obj, (fsdbVarHandle)&small_bus_sig, small_bus_sig.value);
+    SetSig(fsdb_obj, time, 2);
 
     time.L++;
-    ffw_CreateXCoorByHnL(fsdb_obj, time.H, time.L);
-    SetValue(small_bus_sig.value, small_bus_sig.byte_count, 4);
-    ffw_CreateVarValueByHandle(fsdb_obj, (fsdbVarHandle)&small_bus_sig, small_bus_sig.value);
+    SetSig(fsdb_obj, time, 3);
 
     time.L++;
-    ffw_CreateXCoorByHnL(fsdb_obj, time.H, time.L);
-    SetValue(small_bus_sig.value, small_bus_sig.byte_count, 5);
-    ffw_CreateVarValueByHandle(fsdb_obj, (fsdbVarHandle)&small_bus_sig, small_bus_sig.value);
+    SetSig(fsdb_obj, time, 4);
+
+    time.L++;
+    SetSig(fsdb_obj, time, 5);
+
+    time.L++;
+    SetSig(fsdb_obj, time, 6);
 
 
     ffw_Close(fsdb_obj);
