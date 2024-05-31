@@ -8,6 +8,7 @@
 extern ffwObject* fsdb_obj;
 extern fsdbTag64  time;
 extern BusSignal  txnid_sig;
+extern BusSignal  srcid_sig;
 
 static int callback(void *data, int col_count, char** col_values, char** col_names)
 {
@@ -23,6 +24,11 @@ static int callback(void *data, int col_count, char** col_values, char** col_nam
         if (col_value && !strcmp("txnid", col_names[i])) {
             printf("%s = %s\n", col_names[i], col_value);
             SetSig(fsdb_obj, &txnid_sig, time, atoi(col_value));
+        }
+
+        if (col_value && !strcmp("srcid", col_names[i])) {
+            printf("%s = %s\n", col_names[i], col_value);
+            SetSig(fsdb_obj, &srcid_sig, time, atoi(col_value));
         }
         
     }
