@@ -28,7 +28,7 @@ BusSignal txnid_sig = {
     FSDB_VT_VCD_WIRE,
     18,
     25,
-    FSDB_BYTES_PER_BIT_2B,
+    FSDB_BYTES_PER_BIT_1B,
     NULL
 };
 
