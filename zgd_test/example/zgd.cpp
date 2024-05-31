@@ -8,7 +8,7 @@
 // in whole or in part, without prior written permission from SPRINGSOFT.
 // ****************************************************************************/
 //
-// Program Name	: bus.cpp
+// Program Name : bus.cpp
 // Purpose      : Demostrate how to create bus signal and vlaue
 // Description  : In this file, it create several bus signals 
 //                and their value change. 
@@ -21,52 +21,56 @@
 #include "stdlib.h"
 #include "ffwAPI.h"
 
-struct BusSignal {
-    char		*name;		// signal name
-    fsdbVarType		type;		// signal type
-    ushort_T		lbitnum;	// signal left bit number
-    ushort_T		rbitnum;	// signal right bit number
-    fsdbBytesPerBit	bpb;		// signal bytes per bit
-    char		*value; 	// signal value
-    uint_T		byte_count;	// byte count of signal value
-};
-typedef struct BusSignal	BusSignal;
+typedef struct {
+    str_T               name;           // signal name
+    fsdbVarType         type;           // signal type
+    ushort_T            lbitnum;        // signal left bit number
+    ushort_T            rbitnum;        // signal right bit number
+    fsdbBytesPerBit     bpb;            // signal bytes per bit
+    byte_T              *value;         // signal value
+    uint_T              byte_count;     // byte count of signal value
+} BusSignal;
 
 static BusSignal small_bus_sig = { 
-    "small_bus", FSDB_VT_VCD_TRIREG, 0, 3, FSDB_BYTES_PER_BIT_1B, NULL};
+    (str_T)"small_bus",
+    FSDB_VT_VCD_TRIREG,
+    0,
+    3,
+    FSDB_BYTES_PER_BIT_1B,
+    NULL
+};
 
 
-#define ARR_DIM(a)		(sizeof(a)/sizeof(a[0]))
+#define ARR_DIM(a)                (sizeof(a)/sizeof(a[0]))
 
 
 
 //
-// bit_size 	= ABS(lbitnum - rbitnum) + 1, the maximum bit size is FSDB_MAX_BIT_SIZE
-// byte_count 	= bit_size * bytes_per_bit
+// bit_size     = ABS(lbitnum - rbitnum) + 1, the maximum bit size is FSDB_MAX_BIT_SIZE
+// byte_count   = bit_size * bytes_per_bit
 //
-static char*
-AllocateMemory(ushort_T bit_size, fsdbBytesPerBit bpb, uint_T &byte_count)
+static byte_T* AllocateMemory(ushort_T bit_size, fsdbBytesPerBit bpb, uint_T &byte_count)
 {
-    char   *ptr;
+    byte_T*   ptr;
 
     switch(bpb) {
     case FSDB_BYTES_PER_BIT_1B:
         byte_count = 1*bit_size;
-        break;	
+        break;
     case FSDB_BYTES_PER_BIT_2B:
         byte_count = 2*bit_size;
-        break;	
+        break;
     case FSDB_BYTES_PER_BIT_4B:
         byte_count = 4*bit_size;
-        break;	
+        break;
     case FSDB_BYTES_PER_BIT_8B:
         byte_count = 8*bit_size;
-        break;	
+        break;
     default:
         printf("unknown bpb.\n");
         exit(-1);
     }
-    ptr = (char*) calloc(1, byte_count);
+    ptr = (byte_T*)calloc(1, byte_count);
     if(NULL == ptr) {
         printf("Memory resources exhausted.\n");
         exit(-1);
@@ -74,52 +78,51 @@ AllocateMemory(ushort_T bit_size, fsdbBytesPerBit bpb, uint_T &byte_count)
     return ptr;
 }
 
-void
-SetValue(char* value, int n, int v)
+void SetValue(byte_T* value, int n, int v)
 {
-    /*
-    for (int i = 0; i < n; i++) {
-        value[i] = v & 1;
-        v = v >> 1;
-    }
-    */
     while(n--) {
         value[n] = v & 1;
         v = v >> 1;
     }
 }
 
-int
-main(int argc, char *argv[])
+void SetSig(ffwObject* fsdb_obj, fsdbTag64 time, int value)
 {
-    int		bus_vc_count = 36;
-    char	*env_ptr;
-    fsdbTag64 	time;
-    int   	i, j;
-    ffwVarMapId	vm_id;
-    ffwObject 	*fsdb_obj;
+    ffw_CreateXCoorByHnL(fsdb_obj, time.H, time.L);
+    SetValue(small_bus_sig.value, small_bus_sig.byte_count, value);
+    ffw_CreateVarValueByHandle(fsdb_obj, (fsdbVarHandle)&small_bus_sig, small_bus_sig.value);
+}
+
+int main(int argc, str_T argv[])
+{
+    int         bus_vc_count = 36;
+    str_T       env_ptr;
+    fsdbTag64   time;
+    int         i, j;
+    ffwVarMapId vm_id;
+    ffwObject   *fsdb_obj;
 
     env_ptr = getenv("BUS_VC_COUNT");
     if (NULL != env_ptr)
         bus_vc_count = atoi(env_ptr);
 
-    fsdb_obj = ffw_Open("zgd.fsdb", FSDB_FT_VERILOG);
+    fsdb_obj = ffw_Open((str_T)"zgd.fsdb", FSDB_FT_VERILOG);
     if (NULL == fsdb_obj) {
         fprintf(stdout, "failed to create a fsdb file.\n");
         exit(-1);
     }
-    ffw_SetAnnotation(fsdb_obj, "my annotation: test vc creation of bus.");
+    ffw_SetAnnotation(fsdb_obj, (str_T)"my annotation: test vc creation of bus.");
     fprintf(stdout, "fsdb version: %s\n", ffw_GetFsdbVersion());
 
     ffw_CreateTreeByHandleScheme(fsdb_obj);
-    ffw_SetScaleUnit(fsdb_obj, "0.01n"); 
+    ffw_SetScaleUnit(fsdb_obj, (str_T)"0.01n"); 
 
     //
     // Tree1
     //
     ffw_BeginTree(fsdb_obj);
-    ffw_CreateScope(fsdb_obj, FSDB_ST_VCD_MODULE, "top");
-    ffw_CreateScope(fsdb_obj, FSDB_ST_VCD_MODULE, "scope"); //用 xxx.yyy 并没有用
+    ffw_CreateScope(fsdb_obj, FSDB_ST_VCD_MODULE, (str_T)"top");
+    ffw_CreateScope(fsdb_obj, FSDB_ST_VCD_MODULE, (str_T)"scope"); //用 xxx.yyy 并没有用
 
     vm_id = ffw_CreateVarByHandle(fsdb_obj, small_bus_sig.type, 
                         FSDB_VD_OUTPUT, FSDB_DT_HANDLE_VERILOG_STANDARD, 
@@ -159,11 +162,11 @@ main(int argc, char *argv[])
     // create initial value change for each var
     //
     time.H = 0;
-    time.L = 0;
+    time.L = 10;
     ffw_CreateXCoorByHnL(fsdb_obj, time.H, time.L);
 
     ffw_CreateVarValueByHandle(fsdb_obj, (fsdbVarHandle)&small_bus_sig, 
-                               (byte_T*)small_bus_sig.value);
+                               small_bus_sig.value);
 
     //
     // create the time(xtag)
@@ -171,27 +174,27 @@ main(int argc, char *argv[])
     time.L++;
     ffw_CreateXCoorByHnL(fsdb_obj, time.H, time.L);
     SetValue(small_bus_sig.value, small_bus_sig.byte_count, 1);
-    ffw_CreateVarValueByHandle(fsdb_obj, (fsdbVarHandle)&small_bus_sig, (byte_T*)small_bus_sig.value);
+    ffw_CreateVarValueByHandle(fsdb_obj, (fsdbVarHandle)&small_bus_sig, small_bus_sig.value);
 
     time.L++;
     ffw_CreateXCoorByHnL(fsdb_obj, time.H, time.L);
     SetValue(small_bus_sig.value, small_bus_sig.byte_count, 2);
-    ffw_CreateVarValueByHandle(fsdb_obj, (fsdbVarHandle)&small_bus_sig, (byte_T*)small_bus_sig.value);
+    ffw_CreateVarValueByHandle(fsdb_obj, (fsdbVarHandle)&small_bus_sig, small_bus_sig.value);
 
     time.L += 2;
     ffw_CreateXCoorByHnL(fsdb_obj, time.H, time.L);
     SetValue(small_bus_sig.value, small_bus_sig.byte_count, 3);
-    ffw_CreateVarValueByHandle(fsdb_obj, (fsdbVarHandle)&small_bus_sig, (byte_T*)small_bus_sig.value);
+    ffw_CreateVarValueByHandle(fsdb_obj, (fsdbVarHandle)&small_bus_sig, small_bus_sig.value);
 
     time.L++;
     ffw_CreateXCoorByHnL(fsdb_obj, time.H, time.L);
     SetValue(small_bus_sig.value, small_bus_sig.byte_count, 4);
-    ffw_CreateVarValueByHandle(fsdb_obj, (fsdbVarHandle)&small_bus_sig, (byte_T*)small_bus_sig.value);
+    ffw_CreateVarValueByHandle(fsdb_obj, (fsdbVarHandle)&small_bus_sig, small_bus_sig.value);
 
     time.L++;
     ffw_CreateXCoorByHnL(fsdb_obj, time.H, time.L);
     SetValue(small_bus_sig.value, small_bus_sig.byte_count, 5);
-    ffw_CreateVarValueByHandle(fsdb_obj, (fsdbVarHandle)&small_bus_sig, (byte_T*)small_bus_sig.value);
+    ffw_CreateVarValueByHandle(fsdb_obj, (fsdbVarHandle)&small_bus_sig, small_bus_sig.value);
 
 
     ffw_Close(fsdb_obj);
