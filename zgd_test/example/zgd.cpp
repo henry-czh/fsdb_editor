@@ -21,19 +21,19 @@
 #include "stdlib.h"
 #include "ffwAPI.h"
 #include "sqlhelper.h"
+#include "zgd.h"
 
-typedef struct {
-    str_T               name;           // signal name
-    fsdbVarType         type;           // signal type
-    ushort_T            lbitnum;        // signal left bit number
-    ushort_T            rbitnum;        // signal right bit number
-    fsdbBytesPerBit     bpb;            // signal bytes per bit
-    byte_T              *value;         // signal value
-    uint_T              byte_count;     // byte count of signal value
-} BusSignal;
-
-static BusSignal small_bus_sig = { 
+BusSignal txnid_sig = { 
     (str_T)"txnid",
+    FSDB_VT_VCD_TRIREG,
+    0,
+    3,
+    FSDB_BYTES_PER_BIT_1B,
+    NULL
+};
+
+BusSignal srcid_sig = { 
+    (str_T)"srcid",
     FSDB_VT_VCD_TRIREG,
     0,
     3,
@@ -87,11 +87,11 @@ void SetValue(byte_T* value, int n, int v)
     }
 }
 
-void SetSig(ffwObject* fsdb_obj, fsdbTag64 time, int value)
+void SetSig(ffwObject* fsdb_obj, BusSignal* sig, fsdbTag64 time, int value)
 {
     ffw_CreateXCoorByHnL(fsdb_obj, time.H, time.L);
-    SetValue(small_bus_sig.value, small_bus_sig.byte_count, value);
-    ffw_CreateVarValueByHandle(fsdb_obj, (fsdbVarHandle)&small_bus_sig, small_bus_sig.value);
+    SetValue(sig->value, sig->byte_count, value);
+    ffw_CreateVarValueByHandle(fsdb_obj, sig, sig->value);
 }
 
 ffwObject   *fsdb_obj;
@@ -126,28 +126,28 @@ int main(int argc, str_T argv[])
     ffw_CreateScope(fsdb_obj, FSDB_ST_VCD_MODULE, (str_T)"top");
     ffw_CreateScope(fsdb_obj, FSDB_ST_VCD_MODULE, (str_T)"scope"); //用 xxx.yyy 并没有用
 
-    vm_id = ffw_CreateVarByHandle(fsdb_obj, small_bus_sig.type, 
+    vm_id = ffw_CreateVarByHandle(fsdb_obj, txnid_sig.type, 
                         FSDB_VD_OUTPUT, FSDB_DT_HANDLE_VERILOG_STANDARD, 
-                        small_bus_sig.lbitnum, small_bus_sig.rbitnum, &small_bus_sig,
-                        small_bus_sig.name, (fsdbBytesPerBit)small_bus_sig.bpb);
+                        txnid_sig.lbitnum, txnid_sig.rbitnum, &txnid_sig,
+                        txnid_sig.name, (fsdbBytesPerBit)txnid_sig.bpb);
 
     if (NULL == vm_id) {
-        printf("failed to create a var(%s)\n", small_bus_sig.name);
+        printf("failed to create a var(%s)\n", txnid_sig.name);
         exit(0);
     }
     //
     // allocate memory for storing value change and set up initial value change.
     //
-    small_bus_sig.value = AllocateMemory(vm_id->bitSize, 
-        (fsdbBytesPerBit)small_bus_sig.bpb, small_bus_sig.byte_count);
-    for (i = 0; i < small_bus_sig.byte_count; i++) 
-         small_bus_sig.value[i] = i & 0x03;
+    txnid_sig.value = AllocateMemory(vm_id->bitSize, 
+        (fsdbBytesPerBit)txnid_sig.bpb, txnid_sig.byte_count);
+    for (i = 0; i < txnid_sig.byte_count; i++) 
+         txnid_sig.value[i] = i & 0x03;
     //
     // For verilog vcd, the value change can be 0, 1, x and z, we define it as
     // fsdbBitType(enum type) in fsdbShr.h header file, the value is from 0 to 3, 
     // hence we perform "i & 0x03" to make the value within [0, 3].
     //
-    // Since the bytes per bit of small_bus_sig is 1 byte, so we assign each
+    // Since the bytes per bit of txnid_sig is 1 byte, so we assign each
     // bit value based on byte unit; if its bytes per bit is 4 bytes, then we
     // have to assign each bit based on 4 bytes unit.
     // 
@@ -156,12 +156,13 @@ int main(int argc, str_T argv[])
     // allocate memory for storing value change and set up initial value change.
     //
 
-    printf("bitSize[%d] byte_count[%d]\n", vm_id->bitSize, small_bus_sig.byte_count);
+    printf("bitSize[%d] byte_count[%d]\n", vm_id->bitSize, txnid_sig.byte_count);
 
     ffw_EndTree(fsdb_obj);
 
     ReadSig();
 
+    /*
     //
     // create initial value change for each var
     //
@@ -188,6 +189,7 @@ int main(int argc, str_T argv[])
 
     time.L++;
     SetSig(fsdb_obj, time, 6);
+    */
 
 
     ffw_Close(fsdb_obj);

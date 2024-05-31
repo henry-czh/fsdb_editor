@@ -23,5 +23,5 @@ run: $(OBJS)
 
 
 clean:
-	rm xxx $(C_NAME).o
+	rm xxx $(SRC:cpp=o)
 

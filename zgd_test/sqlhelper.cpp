@@ -3,11 +3,11 @@
 #include <stdlib.h>
 #include <sqlite3.h>
 #include "ffwAPI.h"
-
-void SetSig(ffwObject* fsdb_obj, fsdbTag64 time, int value);
+#include "zgd.h"
 
 extern ffwObject* fsdb_obj;
 extern fsdbTag64  time;
+extern BusSignal  txnid_sig;
 
 static int callback(void *data, int col_count, char** col_values, char** col_names)
 {
@@ -22,7 +22,7 @@ static int callback(void *data, int col_count, char** col_values, char** col_nam
 
         if (col_value && !strcmp("txnid", col_names[i])) {
             printf("%s = %s\n", col_names[i], col_value);
-            SetSig(fsdb_obj, time, atoi(col_value));
+            SetSig(fsdb_obj, &txnid_sig, time, atoi(col_value));
         }
         
     }
