@@ -24,4 +24,4 @@ run:$(C_NAME).o
 
 
 clean:
-	rm *.o novas.*
+	-@rm *.o  bus_tr.fsdb* chi_tr_writer
