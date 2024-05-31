@@ -29,24 +29,6 @@
 using namespace std;
 map<string, BusSignal*> sigs;
 
-BusSignal txnid_sig = {
-    (str_T)"txnid",
-    FSDB_VT_VCD_WIRE,
-    18,
-    25,
-    FSDB_BYTES_PER_BIT_1B,
-    NULL
-};
-
-BusSignal srcid_sig = {
-    (str_T)"srcid",
-    FSDB_VT_VCD_TRIREG,
-    0,
-    3,
-    FSDB_BYTES_PER_BIT_1B,
-    NULL
-};
-
 ffwVarMapId vm_id;
 ffwObject   *fsdb_obj;
 fsdbTag64   g_time;
@@ -153,6 +135,7 @@ int main(int argc, str_T argv[])
     ffw_CreateScope(fsdb_obj, FSDB_ST_VCD_MODULE, (str_T)"top");
     ffw_CreateScope(fsdb_obj, FSDB_ST_VCD_MODULE, (str_T)"scope"); //用 xxx.yyy 并没有用
 
+    AddWireSig((str_T)"srcid");
     AddWireSig((str_T)"txnid");
 
     ffw_EndTree(fsdb_obj);
