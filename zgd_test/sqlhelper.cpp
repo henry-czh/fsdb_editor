@@ -11,7 +11,7 @@ using namespace std;
 
 extern ffwObject* fsdb_obj;
 extern fsdbTag64  g_time;
-extern map<string, BusSignal*> sigs;
+extern map<string, BusSignal*> sig_map;
 
 static int callback(void *data, int col_count, char** col_values, char** col_names)
 {
@@ -26,12 +26,12 @@ static int callback(void *data, int col_count, char** col_values, char** col_nam
 
         if (col_value && !strcmp("txnid", col_names[i])) {
             // printf("%s = %s\n", col_names[i], col_value);
-            SetSig(fsdb_obj, sigs["txnid"], g_time, atoi(col_value));
+            SetSig(fsdb_obj, sig_map["txnid"], g_time, atoi(col_value));
         }
 
         if (col_value && !strcmp("srcid", col_names[i])) {
             // printf("%s = %s\n", col_names[i], col_value);
-            SetSig(fsdb_obj, sigs["srcid"], g_time, atoi(col_value));
+            SetSig(fsdb_obj, sig_map["srcid"], g_time, atoi(col_value));
         }
     }
     // printf("\n");

@@ -26,12 +26,19 @@
 #include "sqlhelper.h"
 #include "zgd.h"
 
+#define SIG_COUNT 2
+
 using namespace std;
-map<string, BusSignal*> sigs;
+map<string, BusSignal*> sig_map;
 
 ffwVarMapId vm_id;
 ffwObject   *fsdb_obj;
 fsdbTag64   g_time;
+
+BusSignal sig_arr[SIG_COUNT] = {
+    {(str_T)"srcid", FSDB_VT_VCD_WIRE, 0,  5},
+    {(str_T)"txnid", FSDB_VT_VCD_WIRE, 18, 25},
+};
 
 //
 // bit_size     = ABS(lbitnum - rbitnum) + 1, the maximum bit size is FSDB_MAX_BIT_SIZE
@@ -74,17 +81,9 @@ void SetValue(byte_T* value, int n, int v)
     }
 }
 
-void AddWireSig(str_T name)
+void AddWireSig(BusSignal* sig)
 {
-    BusSignal* sig = new BusSignal();
-    sig->name = name;
-    sig->type = FSDB_VT_VCD_WIRE,
-    sig->lbitnum = 18,
-    sig->rbitnum = 25,
-    sig->bpb = FSDB_BYTES_PER_BIT_1B,
-    sig->value = NULL;
-
-    sigs[name] = sig;
+    sig_map[sig->name] = sig;
 
     vm_id = ffw_CreateVarByHandle(fsdb_obj, sig->type,
                         FSDB_VD_OUTPUT, FSDB_DT_HANDLE_VERILOG_STANDARD,
@@ -107,7 +106,7 @@ void SetSig(ffwObject* fsdb_obj, BusSignal* sig, fsdbTag64 g_time, int value)
 
 int main(int argc, str_T argv[])
 {
-    // sigs.clear();
+    // sig_map.clear();
 
     int         bus_vc_count = 36;
     str_T       env_ptr;
@@ -135,8 +134,10 @@ int main(int argc, str_T argv[])
     ffw_CreateScope(fsdb_obj, FSDB_ST_VCD_MODULE, (str_T)"top");
     ffw_CreateScope(fsdb_obj, FSDB_ST_VCD_MODULE, (str_T)"scope"); //用 xxx.yyy 并没有用
 
-    AddWireSig((str_T)"srcid");
-    AddWireSig((str_T)"txnid");
+    for (int i = 0; i < SIG_COUNT; i++) {
+        printf("zzz: %s\n", sig_arr[i].name);
+        AddWireSig(&sig_arr[i]);
+    }
 
     ffw_EndTree(fsdb_obj);
 
