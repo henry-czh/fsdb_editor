@@ -5,20 +5,20 @@ commFlags += -I./include -I$(VERDI_HOME)/share/FsdbWriter
 CFLAGS=${commFlags}
 CPPFLAGS=-std=c++11 ${commFlags}
 
-LDFLAGS = -Wall -lz -ldl -lstdc++ -lpthread
+LDFLAGS = -Wall -lz -ldl -lstdc++ -lpthread -lsqlite3
 LDFLAGS += -L $(VERDI_HOME)share/FsdbReader
 LDFLAGS += -L $(VERDI_HOME)share/FsdbWriter
 
-C_NAME = example/zgd
-# C_NAME = example/bus_tr_recording
+SRC = example/zgd.cpp \
+      sqlhelper.cpp
 
-OBJS = $(C_NAME).o
+OBJS = $(SRC:cpp=o)
 OBJS += $(VERDI_HOME)/share/FsdbReader/linux64/libnsys.so
 OBJS += $(VERDI_HOME)/share/FsdbReader/linux64/libnffr.so
 OBJS += $(VERDI_HOME)/share/FsdbWriter/linux64/libnffw.so
 #OBJS += misc.o
 
-run: $(C_NAME).o
+run: $(OBJS)
 	g++ ${OBJS} -o xxx $(LDFLAGS)
 
 

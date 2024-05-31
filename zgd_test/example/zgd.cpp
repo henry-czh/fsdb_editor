@@ -20,6 +20,7 @@
 #include "string.h"
 #include "stdlib.h"
 #include "ffwAPI.h"
+#include "sqlhelper.h"
 
 typedef struct {
     str_T               name;           // signal name
@@ -32,7 +33,7 @@ typedef struct {
 } BusSignal;
 
 static BusSignal small_bus_sig = { 
-    (str_T)"small_bus",
+    (str_T)"txnid",
     FSDB_VT_VCD_TRIREG,
     0,
     3,
@@ -93,14 +94,15 @@ void SetSig(ffwObject* fsdb_obj, fsdbTag64 time, int value)
     ffw_CreateVarValueByHandle(fsdb_obj, (fsdbVarHandle)&small_bus_sig, small_bus_sig.value);
 }
 
+ffwObject   *fsdb_obj;
+fsdbTag64   time;
+
 int main(int argc, str_T argv[])
 {
     int         bus_vc_count = 36;
     str_T       env_ptr;
-    fsdbTag64   time;
     int         i, j;
     ffwVarMapId vm_id;
-    ffwObject   *fsdb_obj;
 
     env_ptr = getenv("BUS_VC_COUNT");
     if (NULL != env_ptr)
@@ -158,11 +160,12 @@ int main(int argc, str_T argv[])
 
     ffw_EndTree(fsdb_obj);
 
+    ReadSig();
+
     //
     // create initial value change for each var
     //
-    time.H = 0;
-    time.L = 10;
+    time.L++;
     SetSig(fsdb_obj, time, 0);
 
     //

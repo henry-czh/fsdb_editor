@@ -1,24 +1,41 @@
 #include <stdio.h>
+#include <string.h>
 #include <stdlib.h>
 #include <sqlite3.h>
+#include "ffwAPI.h"
 
-static int callback(void *data, int argc, char **argv, char **azColName)
+void SetSig(ffwObject* fsdb_obj, fsdbTag64 time, int value);
+
+extern ffwObject* fsdb_obj;
+extern fsdbTag64  time;
+
+static int callback(void *data, int col_count, char** col_values, char** col_names)
 {
-    int i;
-    fprintf(stderr, "%s: ", (const char *)data);
-    for (i = 0; i < argc; i++) {
-        printf("%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
+    fprintf(stderr, "data zzz: %s\n", (const char *)data);
+    for (int i = 0; i < col_count; i++) {
+        const char* col_value = col_values[i] ? col_values[i] : "NULL";
+        // printf("%s = %s\n", col_names[i], col_value);
+        if (col_value && !strcmp("time", col_names[i])) {
+            time.L = atoi(col_value);
+            printf("%s = %d\n", col_names[i], time.L);
+        }
+
+        if (col_value && !strcmp("txnid", col_names[i])) {
+            printf("%s = %s\n", col_names[i], col_value);
+            SetSig(fsdb_obj, time, atoi(col_value));
+        }
+        
     }
     printf("\n");
     return 0;
 }
 
-int main(int argc, char *argv[])
+int ReadSig()
 {
     sqlite3 *db;
     char *zErrMsg = 0;
     int rc;
-    char *sql;
+    const char *sql;
     const char *data = "Callback function called";
 
     /* Open database */
@@ -31,7 +48,7 @@ int main(int argc, char *argv[])
     }
 
     /* Create SQL statement */
-    sql = "SELECT * from reqFlit";
+    sql = "SELECT * from rspFlit order by time";
 
     /* Execute SQL statement */
     rc = sqlite3_exec(db, sql, callback, (void *)data, &zErrMsg);
