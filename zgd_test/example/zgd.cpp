@@ -26,18 +26,24 @@
 #include "sqlhelper.h"
 #include "zgd.h"
 
-#define SIG_COUNT 2
-
 using namespace std;
 map<string, BusSignal*> sig_map;
 
 ffwVarMapId vm_id;
 ffwObject   *fsdb_obj;
 fsdbTag64   g_time;
+int         sig_count;
 
-BusSignal sig_arr[SIG_COUNT] = {
-    {(str_T)"srcid", FSDB_VT_VCD_WIRE, 0,  5},
-    {(str_T)"txnid", FSDB_VT_VCD_WIRE, 18, 25},
+BusSignal sig_arr[] = {
+    {(str_T)"tgtid",            FSDB_VT_VCD_WIRE, 4,  10},
+    {(str_T)"srcid",            FSDB_VT_VCD_WIRE, 11, 17},
+    {(str_T)"txnid",            FSDB_VT_VCD_WIRE, 18, 25},
+    // {(str_T)"opcode",        FSDB_VT_VCD_WIRE, 26, 29},
+    {(str_T)"resperr",          FSDB_VT_VCD_WIRE, 30, 31},
+    {(str_T)"resp",             FSDB_VT_VCD_WIRE, 32, 34},
+    {(str_T)"datapull_data",    FSDB_VT_VCD_WIRE, 35, 37},
+    {(str_T)"dbid",             FSDB_VT_VCD_WIRE, 38, 45},
+    {(str_T)"pcrdtype",         FSDB_VT_VCD_WIRE, 46, 49},
 };
 
 //
@@ -132,10 +138,11 @@ int main(int argc, str_T argv[])
     //
     ffw_BeginTree(fsdb_obj);
     ffw_CreateScope(fsdb_obj, FSDB_ST_VCD_MODULE, (str_T)"top");
-    ffw_CreateScope(fsdb_obj, FSDB_ST_VCD_MODULE, (str_T)"scope"); //用 xxx.yyy 并没有用
+    ffw_CreateScope(fsdb_obj, FSDB_ST_VCD_MODULE, (str_T)"rspFlit"); //用 xxx.yyy 并没有用
 
-    for (int i = 0; i < SIG_COUNT; i++) {
-        printf("zzz: %s\n", sig_arr[i].name);
+    sig_count = sizeof(sig_arr) / sizeof(BusSignal);
+    for (int i = 0; i < sig_count; i++) {
+        printf("sig: %s\n", sig_arr[i].name);
         AddWireSig(&sig_arr[i]);
     }
 
