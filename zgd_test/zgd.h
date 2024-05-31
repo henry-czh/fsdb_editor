@@ -4,6 +4,7 @@ typedef struct {
     ushort_T            lbitnum;        // signal left bit number
     ushort_T            rbitnum;        // signal right bit number
     fsdbBytesPerBit     bpb;            // signal bytes per bit
+
     byte_T              *value;         // signal value
     uint_T              byte_count;     // byte count of signal value
 } BusSignal;

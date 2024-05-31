@@ -25,10 +25,10 @@
 
 BusSignal txnid_sig = {
     (str_T)"txnid",
-    FSDB_VT_VCD_TRIREG,
-    0,
-    3,
-    FSDB_BYTES_PER_BIT_1B,
+    FSDB_VT_VCD_WIRE,
+    18,
+    25,
+    FSDB_BYTES_PER_BIT_2B,
     NULL
 };
 
