@@ -130,84 +130,26 @@ int main(int argc, str_T argv[])
                         FSDB_VD_OUTPUT, FSDB_DT_HANDLE_VERILOG_STANDARD,
                         txnid_sig.lbitnum, txnid_sig.rbitnum, &txnid_sig,
                         txnid_sig.name, (fsdbBytesPerBit)txnid_sig.bpb);
-
     if (NULL == vm_id) {
         printf("failed to create a var(%s)\n", txnid_sig.name);
         exit(0);
     }
-    //
-    // allocate memory for storing value change and set up initial value change.
-    //
-    txnid_sig.value = AllocateMemory(vm_id->bitSize,
-        (fsdbBytesPerBit)txnid_sig.bpb, txnid_sig.byte_count);
-    for (i = 0; i < txnid_sig.byte_count; i++)
-         txnid_sig.value[i] = i & 0x03;
-    //
-    // For verilog vcd, the value change can be 0, 1, x and z, we define it as
-    // fsdbBitType(enum type) in fsdbShr.h header file, the value is from 0 to 3,
-    // hence we perform "i & 0x03" to make the value within [0, 3].
-    //
-    // Since the bytes per bit of txnid_sig is 1 byte, so we assign each
-    // bit value based on byte unit; if its bytes per bit is 4 bytes, then we
-    // have to assign each bit based on 4 bytes unit.
-    //
-
-    //
-    // allocate memory for storing value change and set up initial value change.
-    //
-
+    txnid_sig.value = AllocateMemory(vm_id->bitSize, (fsdbBytesPerBit)txnid_sig.bpb, txnid_sig.byte_count);
     printf("bitSize[%d] byte_count[%d]\n", vm_id->bitSize, txnid_sig.byte_count);
 
     vm_id = ffw_CreateVarByHandle(fsdb_obj, srcid_sig.type,
                         FSDB_VD_OUTPUT, FSDB_DT_HANDLE_VERILOG_STANDARD,
                         srcid_sig.lbitnum, srcid_sig.rbitnum, &srcid_sig,
                         srcid_sig.name, (fsdbBytesPerBit)srcid_sig.bpb);
-
     if (NULL == vm_id) {
         printf("failed to create a var(%s)\n", srcid_sig.name);
         exit(0);
     }
-    //
-    // allocate memory for storing value change and set up initial value change.
-    //
-    srcid_sig.value = AllocateMemory(vm_id->bitSize,
-        (fsdbBytesPerBit)srcid_sig.bpb, srcid_sig.byte_count);
-    for (i = 0; i < srcid_sig.byte_count; i++)
-         srcid_sig.value[i] = i & 0x03;
+    srcid_sig.value = AllocateMemory(vm_id->bitSize, (fsdbBytesPerBit)srcid_sig.bpb, srcid_sig.byte_count);
 
     ffw_EndTree(fsdb_obj);
 
     ReadSig();
-
-    /*
-    //
-    // create initial value change for each var
-    //
-    time.L++;
-    SetSig(fsdb_obj, time, 0);
-
-    //
-    // create the time(xtag)
-    //
-    time.L++;
-    SetSig(fsdb_obj, time, 1);
-
-    time.L++;
-    SetSig(fsdb_obj, time, 2);
-
-    time.L++;
-    SetSig(fsdb_obj, time, 3);
-
-    time.L++;
-    SetSig(fsdb_obj, time, 4);
-
-    time.L++;
-    SetSig(fsdb_obj, time, 5);
-
-    time.L++;
-    SetSig(fsdb_obj, time, 6);
-    */
-
 
     ffw_Close(fsdb_obj);
     return 0;
