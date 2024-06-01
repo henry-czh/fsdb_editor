@@ -26,10 +26,8 @@ static int callback(void *data, int col_count, char** col_values, char** col_nam
             // printf("%s = %d\n", col_names[i], g_time.L);
         }
 
-        for (int j = 0; j < sig_count; j++) {
-            if (col_value && !strcmp(sig_arr[j].name, col_names[i])) {
-                SetSig(fsdb_obj, sig_map[sig_arr[j].name], g_time, atoi(col_value));
-            }
+        if (sig_map.count(col_names[i])) {
+            SetSig(fsdb_obj, sig_map[col_names[i]], g_time, atoi(col_value));
         }
     }
     // printf("\n");
