@@ -138,7 +138,9 @@ int main(int argc, str_T argv[])
     //
     ffw_BeginTree(fsdb_obj);
     ffw_CreateScope(fsdb_obj, FSDB_ST_VCD_MODULE, (str_T)"top");
-    ffw_CreateScope(fsdb_obj, FSDB_ST_VCD_MODULE, (str_T)"rspFlit"); //用 xxx.yyy 并没有用
+    ffw_CreateScope(fsdb_obj, FSDB_ST_VCD_MODULE, (str_T)"reqFlit");
+    ffw_CreateUpscope(fsdb_obj);
+    ffw_CreateScope(fsdb_obj, FSDB_ST_VCD_MODULE, (str_T)"rspFlit");
 
     sig_count = sizeof(sig_arr) / sizeof(BusSignal);
     for (int i = 0; i < sig_count; i++) {
