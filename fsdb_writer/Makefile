@@ -24,4 +24,4 @@ run:$(C_NAME).o
 
 
 clean:
-	-@rm *.o  bus_tr.fsdb* chi_tr_writer
+	@-rm  -rf *.o  bus_tr.fsdb* chi_tr_writer novas.* verdiLog
