@@ -216,6 +216,7 @@ __CreateAttr(ffwObject* ffw_obj, ffwObject *obj, const char* name,
              bool_T hidden, fsdbBusDataType bus_data_type);
 
 int ReadTracker();
+void OpenSqliteDB();
 
 //
 // Main Program
@@ -231,6 +232,7 @@ main(int argc, char *argv[])
     //
     __OpenFsdbFileForWrite(&ffw_obj, fname, FSDB_FT_VERILOG);
     __CreateTree(ffw_obj);
+    OpenSqliteDB();
     ReadTracker();
     __CreateBusInfo(ffw_obj);
     ffw_Close(ffw_obj);
@@ -726,7 +728,7 @@ __CreateBusInfo(ffwObject* ffw_obj)
     ffw_AddBusParameter(ffw_obj, bus, (str_T)"SLAVE_COUNT", (str_T)"3");
 }
 
-static int Callback(void *data, int col_count, char** col_values, char** col_names, char* col_end_time)
+static int Callback(void *data, int col_count, char** col_values, char** col_names, const char* col_end_time)
 {
     fsdbAttrHdlVal tr_val[col_count];
     fsdbXTag btime, etime;
@@ -762,14 +764,20 @@ static int Callback(void *data, int col_count, char** col_values, char** col_nam
 
 static int CallbackTracker(void *data, int col_count, char** col_values, char** col_names)
 {
-    return Callback(data, col_count, col_values, col_names, "end_time");
+    int re = Callback(data, col_count, col_values, col_names, "end_time");
+    /*
+    for (int i = 0; i < col_count; i++) {
+        if (col_values[i] && !strcmp("reqFlit_id", col_names[i])) {
+            int reqFlit_id = atoi(col_values[i]);
+            printf("reqFlit_id[%d]\n", reqFlit_id);
+        }
+    }
+    */
 }
 
-int ReadTracker()
+sqlite3 *db;
+void OpenSqliteDB()
 {
-    sqlite3 *db;
-    char* zErrMsg = 0;
-
     int rc = sqlite3_open("./chi_analyzer-2.sqlite", &db);
     if (rc) {
         fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));
@@ -777,11 +785,15 @@ int ReadTracker()
     } else {
         fprintf(stderr, "Opened database successfully\n");
     }
+}
 
+int ReadTracker()
+{
     const char* sql = "select * from v_reqTrackerT order by time";
 
+    char* zErrMsg = 0;
     const char* data = "Callback function called";
-    rc = sqlite3_exec(db, sql, CallbackTracker, (void *)data, &zErrMsg);
+    int rc = sqlite3_exec(db, sql, CallbackTracker, (void*)data, &zErrMsg);
     if (rc != SQLITE_OK) {
         fprintf(stderr, "SQL error: %s\n", zErrMsg);
         sqlite3_free(zErrMsg);
