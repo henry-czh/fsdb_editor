@@ -220,6 +220,7 @@ __CreateAttr(ffwObject* ffw_obj, ffwObject *obj, const char* name,
              bool_T hidden, fsdbBusDataType bus_data_type);
 
 int ReadTracker();
+int ReadReqFlit(int);
 void OpenSqliteDB();
 
 //
@@ -740,41 +741,7 @@ void Callback(void *data, int col_count, char** col_values, char** col_names, ma
     }
 }
 
-static int Callback0(void *data, int col_count, char** col_values, char** col_names, const char* col_end_time)
-{
-    fsdbAttrHdlVal tr_val[col_count];
-    fsdbXTag btime, etime;
-
-    for (int i = 0; i < col_count; i++) {
-        tr_val[i].hdl = __CreateAttr(ffw_obj, col_names[i], FSDB_ATTR_DT_STRING, 0, 0, false, FSDB_BDT_GENERIC);
-        tr_val[i].value = col_values[i] ? (byte_T*)(&col_values[i]) : (byte_T*)(&"NULL");
-
-        if (col_values[i] && !strcmp("time", col_names[i])) {
-            btime.hltag.H = 0;
-            btime.hltag.L = atoi(col_values[i]);
-            continue;
-        }
-        if (col_values[i] && !strcmp(col_end_time, col_names[i])) {
-            etime.hltag.H = 0;
-            etime.hltag.L = atoi(col_values[i]) + 1;
-            continue;
-        }
-    }
-    fsdbTag64 xtag = {btime.hltag.H, btime.hltag.L};
-    ffw_CreateXCoorByHnL(ffw_obj, xtag.H, xtag.L);
-    fsdbTransId tr_trans = ffw_BeginTransaction(ffw_obj, reqtracker_stream, btime,
-                                        (str_T)"reqtracker", NULL, 0);
-    if (FSDB_INVALID_TRANS_ID == tr_trans) {
-        fprintf(stderr, "reqtracker fails during begin!\n");
-    }
-    if (FSDB_RC_SUCCESS !=
-        ffw_EndTransaction(ffw_obj, tr_trans, etime, tr_val, col_count)) {
-        fprintf(stderr, "reqtracker fails during end!\n");
-    }
-    return 0;
-}
-
-void WriteTracker(int col_count, char** col_values, char** col_names, map<string, char*>& values, const char* end_time)
+void WriteField(int col_count, char** col_values, char** col_names, map<string, char*>& values, const char* end_time, fsdbStreamHdl stream_hdl, str_T sig_name)
 {
     fsdbAttrHdlVal tr_val[col_count];
 
@@ -787,12 +754,12 @@ void WriteTracker(int col_count, char** col_values, char** col_names, map<string
     btime.hltag.H = 0;
     btime.hltag.L = atoi(values["time"]);
     etime.hltag.H = 0;
-    etime.hltag.L = atoi(values["end_time"]);
+    etime.hltag.L = atoi(values[end_time]);
 
     fsdbTag64 xtag = {btime.hltag.H, btime.hltag.L};
     ffw_CreateXCoorByHnL(ffw_obj, xtag.H, xtag.L);
-    fsdbTransId tr_trans = ffw_BeginTransaction(ffw_obj, reqtracker_stream, btime,
-                                        (str_T)"reqtracker", NULL, 0);
+    fsdbTransId tr_trans = ffw_BeginTransaction(ffw_obj, stream_hdl, btime,
+                                                sig_name, NULL, 0);
     if (FSDB_INVALID_TRANS_ID == tr_trans) {
         fprintf(stderr, "reqtracker fails during begin!\n");
     }
@@ -800,16 +767,27 @@ void WriteTracker(int col_count, char** col_values, char** col_names, map<string
         ffw_EndTransaction(ffw_obj, tr_trans, etime, tr_val, col_count)) {
         fprintf(stderr, "reqtracker fails during end!\n");
     }
-
-    int reqFlit_id = atoi(values["reqFlit_id"]);
-    printf("reqFlit_id 2 [%d]\n", reqFlit_id);
 }
 
 static int CallbackTracker(void* data, int col_count, char** col_values, char** col_names)
 {
     map<string, char*> values;
     Callback(data, col_count, col_values, col_names, values);
-    WriteTracker(col_count, col_values, col_names, values, "end_time");
+    WriteField(col_count, col_values, col_names, values, "end_time", reqtracker_stream, (str_T)"reqtracker");
+
+    int reqFlit_id = atoi(values["reqFlit_id"]);
+    ReadReqFlit(reqFlit_id);
+    printf("reqFlit_id 3 [%d]\n", reqFlit_id);
+    return 0;
+}
+
+static int CallbackReqFlit(void* data, int col_count, char** col_values, char** col_names)
+{
+    printf("CallbackReqFlit 1\n");
+    map<string, char*> values;
+    Callback(data, col_count, col_values, col_names, values);
+    printf("CallbackReqFlit 2\n");
+    WriteField(col_count, col_values, col_names, values, "time", req_stream, (str_T)"req_flit");
     return 0;
 }
 
@@ -831,6 +809,23 @@ int ReadTracker()
     char* zErrMsg = 0;
     const char* data = "Callback function called";
     int rc = sqlite3_exec(db, sql, CallbackTracker, (void*)data, &zErrMsg);
+    if (rc != SQLITE_OK) {
+        fprintf(stderr, "SQL error: %s\n", zErrMsg);
+        sqlite3_free(zErrMsg);
+    } else {
+        fprintf(stdout, "Operation done successfully\n");
+    }
+    return 0;
+}
+
+int ReadReqFlit(int id)
+{
+    char sql[128];
+    sprintf(sql, "select * from v_reqFlit where id = %d", id);
+
+    char* zErrMsg = 0;
+    const char* data = "Callback function called";
+    int rc = sqlite3_exec(db, sql, CallbackReqFlit, (void*)data, &zErrMsg);
     if (rc != SQLITE_OK) {
         fprintf(stderr, "SQL error: %s\n", zErrMsg);
         sqlite3_free(zErrMsg);
