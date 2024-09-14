@@ -726,7 +726,7 @@ __CreateBusInfo(ffwObject* ffw_obj)
     ffw_AddBusParameter(ffw_obj, bus, (str_T)"SLAVE_COUNT", (str_T)"3");
 }
 
-static int callback(void *data, int col_count, char** col_values, char** col_names)
+static int Callback(void *data, int col_count, char** col_values, char** col_names, char* col_end_time)
 {
     fsdbAttrHdlVal tr_val[col_count];
     fsdbXTag btime, etime;
@@ -740,7 +740,7 @@ static int callback(void *data, int col_count, char** col_values, char** col_nam
             btime.hltag.L = atoi(col_values[i]);
             continue;
         }
-        if (col_values[i] && !strcmp("end_time", col_names[i])) {
+        if (col_values[i] && !strcmp(col_end_time, col_names[i])) {
             etime.hltag.H = 0;
             etime.hltag.L = atoi(col_values[i]) + 1;
             continue;
@@ -760,6 +760,11 @@ static int callback(void *data, int col_count, char** col_values, char** col_nam
     return 0;
 }
 
+static int CallbackTracker(void *data, int col_count, char** col_values, char** col_names)
+{
+    return Callback(data, col_count, col_values, col_names, "end_time");
+}
+
 int ReadTracker()
 {
     sqlite3 *db;
@@ -776,7 +781,7 @@ int ReadTracker()
     const char* sql = "select * from v_reqTrackerT order by time";
 
     const char* data = "Callback function called";
-    rc = sqlite3_exec(db, sql, callback, (void *)data, &zErrMsg);
+    rc = sqlite3_exec(db, sql, CallbackTracker, (void *)data, &zErrMsg);
     if (rc != SQLITE_OK) {
         fprintf(stderr, "SQL error: %s\n", zErrMsg);
         sqlite3_free(zErrMsg);
