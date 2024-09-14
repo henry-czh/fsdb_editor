@@ -5,7 +5,7 @@ commFlags += -I./include -I$(VERDI_HOME)/share/FsdbWriter
 CFLAGS=${commFlags}
 CPPFLAGS=-std=c++11 ${commFlags}
 
-LDFLAGS = -Wall -lz -ldl -lstdc++ -lpthread
+LDFLAGS = -Wall -lz -ldl -lstdc++ -lpthread -lsqlite3
 LDFLAGS += -L $(VERDI_HOME)share/FsdbReader
 LDFLAGS += -L $(VERDI_HOME)share/FsdbWriter
 

@@ -26,6 +26,8 @@
 #include <assert.h>
 #include <ffwAPI.h>
 
+#include <sqlite3.h>
+
 //
 // Constants
 //
@@ -209,17 +211,19 @@ static void
 __CreateBusInfo(ffwObject* ffw_obj);
 
 static fsdbAttrHdl
-__CreateAttr(ffwObject* ffw_obj, ffwObject *obj, str_T name,
+__CreateAttr(ffwObject* ffw_obj, ffwObject *obj, const char* name,
              fsdbAttrDataType data_type, int larridx, int rarridx,
              bool_T hidden, fsdbBusDataType bus_data_type);
+
+int ReadTracker();
 
 //
 // Main Program
 //
+ffwObject   *ffw_obj = NULL;
 int
 main(int argc, char *argv[])
 {
-    ffwObject   *ffw_obj = NULL;
     char        fname[] = "bus_tr.fsdb";
 
     //
@@ -227,7 +231,7 @@ main(int argc, char *argv[])
     //
     __OpenFsdbFileForWrite(&ffw_obj, fname, FSDB_FT_VERILOG);
     __CreateTree(ffw_obj);
-    __CreateVC(ffw_obj);
+    ReadTracker();
     __CreateBusInfo(ffw_obj);
     ffw_Close(ffw_obj);
 
@@ -235,7 +239,7 @@ main(int argc, char *argv[])
 }
 
 fsdbAttrHdl
-__CreateAttr(ffwObject* ffw_obj, str_T name, fsdbAttrDataType data_type,
+__CreateAttr(ffwObject* ffw_obj, const char* name, fsdbAttrDataType data_type,
              int larridx, int rarridx, bool_T hidden,
              fsdbBusDataType bus_data_type)
 {
@@ -243,7 +247,7 @@ __CreateAttr(ffwObject* ffw_obj, str_T name, fsdbAttrDataType data_type,
 
     memset ((void*)&attr_arg, 0, sizeof(ffwAttrArg));
     attr_arg.size = sizeof(ffwAttrArg);
-    attr_arg.name = name;
+    attr_arg.name = (str_T)name;
     attr_arg.data_type = data_type;
     attr_arg.larridx = larridx;
     attr_arg.rarridx = rarridx;
@@ -269,18 +273,18 @@ __CreateTree(ffwObject* ffw_obj)
     // Create tree
     //
     ffw_BeginTree(ffw_obj);
-    ffw_CreateScope(ffw_obj, FSDB_ST_VCD_MODULE, "CHI-Analyzer");
-    ffw_CreateScope(ffw_obj, FSDB_ST_VCD_MODULE, "cpu0");
-    ffw_CreateScope(ffw_obj, FSDB_ST_VCD_MODULE, "core0");
+    ffw_CreateScope(ffw_obj, FSDB_ST_VCD_MODULE, (str_T)"CHI-Analyzer");
+    ffw_CreateScope(ffw_obj, FSDB_ST_VCD_MODULE, (str_T)"cpu0");
+    ffw_CreateScope(ffw_obj, FSDB_ST_VCD_MODULE, (str_T)"core0");
 
-    reqtracker_stream = ffw_CreateStream(ffw_obj, "req_tracker");
-    snptracker_stream = ffw_CreateStream(ffw_obj, "snp_tracker");
-    req_stream = ffw_CreateStream(ffw_obj, "req_flit");
-    txrsp_stream = ffw_CreateStream(ffw_obj, "txrsp_flit");
-    txdat_stream = ffw_CreateStream(ffw_obj, "txdat_flit");
-    rxrsp_stream = ffw_CreateStream(ffw_obj, "rxrsp_flit");
-    rxdat_stream = ffw_CreateStream(ffw_obj, "rxdat_flit");
-    rxsnp_stream = ffw_CreateStream(ffw_obj, "rxsnp_flit");
+    reqtracker_stream = ffw_CreateStream(ffw_obj, (str_T)"req_tracker");
+    snptracker_stream = ffw_CreateStream(ffw_obj, (str_T)"snp_tracker");
+    req_stream = ffw_CreateStream(ffw_obj, (str_T)"req_flit");
+    txrsp_stream = ffw_CreateStream(ffw_obj, (str_T)"txrsp_flit");
+    txdat_stream = ffw_CreateStream(ffw_obj, (str_T)"txdat_flit");
+    rxrsp_stream = ffw_CreateStream(ffw_obj, (str_T)"rxrsp_flit");
+    rxdat_stream = ffw_CreateStream(ffw_obj, (str_T)"rxdat_flit");
+    rxsnp_stream = ffw_CreateStream(ffw_obj, (str_T)"rxsnp_flit");
 
     qos_attr                                    = __CreateAttr(ffw_obj, "qos", FSDB_ATTR_DT_UINT32, 0, 0, FALSE, FSDB_BDT_GENERIC);
     tgtid_attr                                  = __CreateAttr(ffw_obj, "tgtid", FSDB_ATTR_DT_UINT32, 0, 0, FALSE, FSDB_BDT_GENERIC);
@@ -362,7 +366,7 @@ __WriteOneRspFlit(ffwObject* ffw_obj, rspFlit rspflit, fsdbStreamHdl rsp_stream)
     xtag.L = btime.hltag.L;
     ffw_CreateXCoorByHnL(ffw_obj, xtag.H, xtag.L);
     rsp_trans = ffw_BeginTransaction(ffw_obj, rsp_stream, btime,
-                                        "rsp", NULL, 0);
+                                     (str_T)"rsp", NULL, 0);
     if (FSDB_INVALID_TRANS_ID == rsp_trans) {
         fprintf(stderr, "rsp fails during begin!\n");
     }
@@ -420,7 +424,7 @@ __WriteOneDatFlit(ffwObject* ffw_obj, datFlit *datflit, fsdbStreamHdl dat_stream
     xtag.L = btime.hltag.L;
     ffw_CreateXCoorByHnL(ffw_obj, xtag.H, xtag.L);
     dat_trans = ffw_BeginTransaction(ffw_obj, dat_stream, btime,
-                                        "aphase", NULL, 0);
+                                     (str_T)"aphase", NULL, 0);
     if (FSDB_INVALID_TRANS_ID == dat_trans) {
         fprintf(stderr, "dat fails during begin!\n");
     }
@@ -473,7 +477,7 @@ __WriteOneSnpFlit(ffwObject* ffw_obj, snpFlit *snpflit, fsdbStreamHdl snp_stream
     xtag.L = btime.hltag.L;
     ffw_CreateXCoorByHnL(ffw_obj, xtag.H, xtag.L);
     snp_trans = ffw_BeginTransaction(ffw_obj, snp_stream, btime,
-                                        "snp", NULL, 0);
+                                     (str_T)"snp", NULL, 0);
     if (FSDB_INVALID_TRANS_ID == snp_trans) {
         fprintf(stderr, "snp fails during begin!\n");
     }
@@ -549,7 +553,7 @@ __WriteOneReqFlit(ffwObject* ffw_obj, reqFlit *reqflit)
     xtag.L = btime.hltag.L;
     ffw_CreateXCoorByHnL(ffw_obj, xtag.H, xtag.L);
     req_trans = ffw_BeginTransaction(ffw_obj, req_stream, btime,
-                                        "req", NULL, 0);
+                                     (str_T)"req", NULL, 0);
     if (FSDB_INVALID_TRANS_ID == req_trans) {
         fprintf(stderr, "req fails during begin!\n");
     }
@@ -590,7 +594,7 @@ __WriteOneReqTracker(ffwObject* ffw_obj, reqFlit *reqflit, rspFlit *rspflit)
     xtag.L = btime.hltag.L;
     ffw_CreateXCoorByHnL(ffw_obj, xtag.H, xtag.L);
     tr_trans = ffw_BeginTransaction(ffw_obj, reqtracker_stream, btime,
-                                        "reqtracker", NULL, 0);
+                                    (str_T)"reqtracker", NULL, 0);
     if (FSDB_INVALID_TRANS_ID == tr_trans) {
         fprintf(stderr, "reqtracker fails during begin!\n");
     }
@@ -613,7 +617,7 @@ __CreateVC(ffwObject* ffw_obj)
 
     fsdbTransId     reqtracker_trans, req_trans, rsp_trans;
 
-    fsdbRelationHdl relation1 = ffw_CreateRelation(ffw_obj, "parent-child");
+    fsdbRelationHdl relation1 = ffw_CreateRelation(ffw_obj, (str_T)"parent-child");
 
 
     // transfer 2
@@ -695,7 +699,7 @@ __OpenFsdbFileForWrite(ffwObject **fsdb_obj, char fname[],
 
     // Use handle scheme for tree creation
     ffw_CreateTreeByHandleScheme(*fsdb_obj);
-    ffw_SetScaleUnit(*fsdb_obj, "1p");
+    ffw_SetScaleUnit(*fsdb_obj, (str_T)"1p");
     ffw_WarnSuppress(TRUE);
 }
 
@@ -705,10 +709,10 @@ __OpenFsdbFileForWrite(ffwObject **fsdb_obj, char fname[],
 void
 __CreateBusInfo(ffwObject* ffw_obj)
 {
-    fsdbBusHdl bus = ffw_CreateBus(ffw_obj, "ahb1", AHB_PROTOCOL);
+    fsdbBusHdl bus = ffw_CreateBus(ffw_obj, (str_T)"ahb1", (str_T)AHB_PROTOCOL);
 
     // Setting bus clock information
-    ffw_SetBusClock(ffw_obj, bus, "/system/hclk", FSDB_CLOCK_POSEDGE);
+    ffw_SetBusClock(ffw_obj, bus, (str_T)"/system/hclk", FSDB_CLOCK_POSEDGE);
 
     // Add streams to bus
     ffw_AddBusStream(ffw_obj, bus, reqtracker_stream);
@@ -716,8 +720,72 @@ __CreateBusInfo(ffwObject* ffw_obj)
     ffw_AddBusStream(ffw_obj, bus, rxrsp_stream);
 
     // Set bus parameters
-    ffw_AddBusParameter(ffw_obj, bus, "ADDR_WIDTH", "32");
-    ffw_AddBusParameter(ffw_obj, bus, "DATA_WIDTH", "32");
-    ffw_AddBusParameter(ffw_obj, bus, "MASTER_COUNT", "2");
-    ffw_AddBusParameter(ffw_obj, bus, "SLAVE_COUNT", "3");
+    ffw_AddBusParameter(ffw_obj, bus, (str_T)"ADDR_WIDTH", (str_T)"32");
+    ffw_AddBusParameter(ffw_obj, bus, (str_T)"DATA_WIDTH", (str_T)"32");
+    ffw_AddBusParameter(ffw_obj, bus, (str_T)"MASTER_COUNT", (str_T)"2");
+    ffw_AddBusParameter(ffw_obj, bus, (str_T)"SLAVE_COUNT", (str_T)"3");
 }
+
+static int callback(void *data, int col_count, char** col_values, char** col_names)
+{
+    fsdbAttrHdlVal tr_val[col_count];
+    fsdbXTag btime, etime;
+
+    for (int i = 0; i < col_count; i++) {
+        const char* col_value = col_values[i] ? col_values[i] : "NULL";
+
+        tr_val[i].hdl = __CreateAttr(ffw_obj, col_names[i], FSDB_ATTR_DT_UINT32, 0, 0, false, FSDB_BDT_GENERIC);
+        tr_val[i].value = (byte_T*)col_value;
+
+        if (col_value && !strcmp("time", col_names[i])) {
+            btime.hltag.H = 0;
+            btime.hltag.L = atoi(col_value);
+            continue;
+        }
+        if (col_value && !strcmp("end_time", col_names[i])) {
+            etime.hltag.H = 0;
+            etime.hltag.L = atoi(col_value) + 1;
+            continue;
+        }
+    }
+    fsdbTag64 xtag = {btime.hltag.H, btime.hltag.L};
+    ffw_CreateXCoorByHnL(ffw_obj, xtag.H, xtag.L);
+    fsdbTransId tr_trans = ffw_BeginTransaction(ffw_obj, reqtracker_stream, btime,
+                                        (str_T)"reqtracker", NULL, 0);
+    if (FSDB_INVALID_TRANS_ID == tr_trans) {
+        fprintf(stderr, "reqtracker fails during begin!\n");
+    }
+    if (FSDB_RC_SUCCESS !=
+        ffw_EndTransaction(ffw_obj, tr_trans, etime, tr_val, col_count)) {
+        fprintf(stderr, "reqtracker fails during end!\n");
+    }
+    return 0;
+}
+
+int ReadTracker()
+{
+    sqlite3 *db;
+    char* zErrMsg = 0;
+
+    int rc = sqlite3_open("./chi_analyzer-2.sqlite", &db);
+    if (rc) {
+        fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));
+        exit(0);
+    } else {
+        fprintf(stderr, "Opened database successfully\n");
+    }
+
+    const char* sql = "select * from v_reqTrackerT order by time";
+
+    const char* data = "Callback function called";
+    rc = sqlite3_exec(db, sql, callback, (void *)data, &zErrMsg);
+    if (rc != SQLITE_OK) {
+        fprintf(stderr, "SQL error: %s\n", zErrMsg);
+        sqlite3_free(zErrMsg);
+    } else {
+        fprintf(stdout, "Operation done successfully\n");
+    }
+    sqlite3_close(db);
+    return 0;
+}
+
