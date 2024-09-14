@@ -38,12 +38,16 @@ BusSignal sig_arr[] = {
     {(str_T)"tgtid",            FSDB_VT_VCD_WIRE, 4,  10},
     {(str_T)"srcid",            FSDB_VT_VCD_WIRE, 11, 17},
     {(str_T)"txnid",            FSDB_VT_VCD_WIRE, 18, 25},
-    // {(str_T)"opcode",        FSDB_VT_VCD_WIRE, 26, 29},
+    {(str_T)"opcode_id",        FSDB_VT_VCD_WIRE, 26, 29},
     {(str_T)"resperr",          FSDB_VT_VCD_WIRE, 30, 31},
     {(str_T)"resp",             FSDB_VT_VCD_WIRE, 32, 34},
     {(str_T)"datapull_data",    FSDB_VT_VCD_WIRE, 35, 37},
     {(str_T)"dbid",             FSDB_VT_VCD_WIRE, 38, 45},
     {(str_T)"pcrdtype",         FSDB_VT_VCD_WIRE, 46, 49},
+};
+
+BusSignal sig_arr2[] = {
+    {(str_T)"test",             FSDB_VT_VCD_WIRE, 4,  10},
 };
 
 //
@@ -103,6 +107,7 @@ void AddWireSig(BusSignal* sig)
     printf("bitSize[%d] byte_count[%d]\n", vm_id->bitSize, sig->byte_count);
 }
 
+// 改变某个信号(sig)在某个时间(g_time)为value
 void SetSig(ffwObject* fsdb_obj, BusSignal* sig, fsdbTag64 g_time, int value)
 {
     ffw_CreateXCoorByHnL(fsdb_obj, g_time.H, g_time.L);
@@ -139,6 +144,9 @@ int main(int argc, str_T argv[])
     ffw_BeginTree(fsdb_obj);
     ffw_CreateScope(fsdb_obj, FSDB_ST_VCD_MODULE, (str_T)"top");
     ffw_CreateScope(fsdb_obj, FSDB_ST_VCD_MODULE, (str_T)"reqFlit");
+
+    AddWireSig(&sig_arr2[0]);
+
     ffw_CreateUpscope(fsdb_obj);
     ffw_CreateScope(fsdb_obj, FSDB_ST_VCD_MODULE, (str_T)"rspFlit");
 

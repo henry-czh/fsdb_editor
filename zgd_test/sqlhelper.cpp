@@ -43,7 +43,7 @@ int ReadSig()
     const char *data = "Callback function called";
 
     /* Open database */
-    rc = sqlite3_open("../fsdb_writer/chi_analyzer.sqlite", &db);
+    rc = sqlite3_open("../fsdb_writer/chi_analyzer-2.sqlite", &db);
     if (rc) {
         fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));
         exit(0);
@@ -52,7 +52,7 @@ int ReadSig()
     }
 
     /* Create SQL statement */
-    sql = "SELECT * from rspFlit order by time";
+    sql = "select * from v_rspFlit order by time";
 
     /* Execute SQL statement */
     rc = sqlite3_exec(db, sql, callback, (void *)data, &zErrMsg);
