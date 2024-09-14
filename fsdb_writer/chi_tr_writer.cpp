@@ -25,8 +25,12 @@
 #include <string.h>
 #include <assert.h>
 #include <ffwAPI.h>
+#include <string>
+#include <map>
 
 #include <sqlite3.h>
+
+using namespace std;
 
 //
 // Constants
@@ -221,9 +225,9 @@ void OpenSqliteDB();
 //
 // Main Program
 //
-ffwObject   *ffw_obj = NULL;
-int
-main(int argc, char *argv[])
+sqlite3 *db = NULL;
+ffwObject *ffw_obj = NULL;
+int main(int argc, char *argv[])
 {
     char        fname[] = "bus_tr.fsdb";
 
@@ -234,6 +238,7 @@ main(int argc, char *argv[])
     __CreateTree(ffw_obj);
     OpenSqliteDB();
     ReadTracker();
+    sqlite3_close(db);
     __CreateBusInfo(ffw_obj);
     ffw_Close(ffw_obj);
 
@@ -728,7 +733,14 @@ __CreateBusInfo(ffwObject* ffw_obj)
     ffw_AddBusParameter(ffw_obj, bus, (str_T)"SLAVE_COUNT", (str_T)"3");
 }
 
-static int Callback(void *data, int col_count, char** col_values, char** col_names, const char* col_end_time)
+void Callback(void *data, int col_count, char** col_values, char** col_names, map<string, string>& values)
+{
+    for (int i = 0; i < col_count; i++) {
+        values[col_names[i]] = col_values[i];
+    }
+}
+
+static int Callback0(void *data, int col_count, char** col_values, char** col_names, const char* col_end_time)
 {
     fsdbAttrHdlVal tr_val[col_count];
     fsdbXTag btime, etime;
@@ -764,18 +776,39 @@ static int Callback(void *data, int col_count, char** col_values, char** col_nam
 
 static int CallbackTracker(void *data, int col_count, char** col_values, char** col_names)
 {
-    int re = Callback(data, col_count, col_values, col_names, "end_time");
-    /*
+    map<string, string> values;
+    Callback(data, col_count, col_values, col_names, values);
+
+    fsdbAttrHdlVal tr_val[col_count];
+
     for (int i = 0; i < col_count; i++) {
-        if (col_values[i] && !strcmp("reqFlit_id", col_names[i])) {
-            int reqFlit_id = atoi(col_values[i]);
-            printf("reqFlit_id[%d]\n", reqFlit_id);
-        }
+        tr_val[i].hdl = __CreateAttr(ffw_obj, col_names[i], FSDB_ATTR_DT_STRING, 0, 0, false, FSDB_BDT_GENERIC);
+        tr_val[i].value = col_values[i] ? (byte_T*)(&col_values[i]) : (byte_T*)(&"NULL");
     }
-    */
+
+    fsdbXTag btime, etime;
+    btime.hltag.H = 0;
+    btime.hltag.L = atoi(values["time"].c_str());
+    etime.hltag.H = 0;
+    etime.hltag.L = atoi(values["end_time"].c_str());
+
+    fsdbTag64 xtag = {btime.hltag.H, btime.hltag.L};
+    ffw_CreateXCoorByHnL(ffw_obj, xtag.H, xtag.L);
+    fsdbTransId tr_trans = ffw_BeginTransaction(ffw_obj, reqtracker_stream, btime,
+                                        (str_T)"reqtracker", NULL, 0);
+    if (FSDB_INVALID_TRANS_ID == tr_trans) {
+        fprintf(stderr, "reqtracker fails during begin!\n");
+    }
+    if (FSDB_RC_SUCCESS !=
+        ffw_EndTransaction(ffw_obj, tr_trans, etime, tr_val, col_count)) {
+        fprintf(stderr, "reqtracker fails during end!\n");
+    }
+
+    int reqFlit_id = atoi(values["reqFlit_id"].c_str());
+    printf("reqFlit_id[%d]\n", reqFlit_id);
+    return 0;
 }
 
-sqlite3 *db;
 void OpenSqliteDB()
 {
     int rc = sqlite3_open("./chi_analyzer-2.sqlite", &db);
@@ -800,7 +833,6 @@ int ReadTracker()
     } else {
         fprintf(stdout, "Operation done successfully\n");
     }
-    sqlite3_close(db);
     return 0;
 }
 
