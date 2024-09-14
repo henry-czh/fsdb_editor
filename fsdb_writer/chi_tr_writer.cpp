@@ -732,19 +732,17 @@ static int callback(void *data, int col_count, char** col_values, char** col_nam
     fsdbXTag btime, etime;
 
     for (int i = 0; i < col_count; i++) {
-        const char* col_value = col_values[i] ? col_values[i] : "NULL";
+        tr_val[i].hdl = __CreateAttr(ffw_obj, col_names[i], FSDB_ATTR_DT_STRING, 0, 0, false, FSDB_BDT_GENERIC);
+        tr_val[i].value = col_values[i] ? (byte_T*)(&col_values[i]) : (byte_T*)(&"NULL");
 
-        tr_val[i].hdl = __CreateAttr(ffw_obj, col_names[i], FSDB_ATTR_DT_UINT32, 0, 0, false, FSDB_BDT_GENERIC);
-        tr_val[i].value = (byte_T*)col_value;
-
-        if (col_value && !strcmp("time", col_names[i])) {
+        if (col_values[i] && !strcmp("time", col_names[i])) {
             btime.hltag.H = 0;
-            btime.hltag.L = atoi(col_value);
+            btime.hltag.L = atoi(col_values[i]);
             continue;
         }
-        if (col_value && !strcmp("end_time", col_names[i])) {
+        if (col_values[i] && !strcmp("end_time", col_names[i])) {
             etime.hltag.H = 0;
-            etime.hltag.L = atoi(col_value) + 1;
+            etime.hltag.L = atoi(col_values[i]) + 1;
             continue;
         }
     }
