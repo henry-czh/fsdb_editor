@@ -733,7 +733,7 @@ __CreateBusInfo(ffwObject* ffw_obj)
     ffw_AddBusParameter(ffw_obj, bus, (str_T)"SLAVE_COUNT", (str_T)"3");
 }
 
-void Callback(void *data, int col_count, char** col_values, char** col_names, map<string, string>& values)
+void Callback(void *data, int col_count, char** col_values, char** col_names, map<string, char*>& values)
 {
     for (int i = 0; i < col_count; i++) {
         values[col_names[i]] = col_values[i];
@@ -774,7 +774,7 @@ static int Callback0(void *data, int col_count, char** col_values, char** col_na
     return 0;
 }
 
-void WriteTracker(int col_count, char** col_values, char** col_names, map<string, string>& values, const char* end_time)
+void WriteTracker(int col_count, char** col_values, char** col_names, map<string, char*>& values, const char* end_time)
 {
     fsdbAttrHdlVal tr_val[col_count];
 
@@ -785,9 +785,9 @@ void WriteTracker(int col_count, char** col_values, char** col_names, map<string
 
     fsdbXTag btime, etime;
     btime.hltag.H = 0;
-    btime.hltag.L = atoi(values["time"].c_str());
+    btime.hltag.L = atoi(values["time"]);
     etime.hltag.H = 0;
-    etime.hltag.L = atoi(values["end_time"].c_str());
+    etime.hltag.L = atoi(values["end_time"]);
 
     fsdbTag64 xtag = {btime.hltag.H, btime.hltag.L};
     ffw_CreateXCoorByHnL(ffw_obj, xtag.H, xtag.L);
@@ -801,13 +801,13 @@ void WriteTracker(int col_count, char** col_values, char** col_names, map<string
         fprintf(stderr, "reqtracker fails during end!\n");
     }
 
-    int reqFlit_id = atoi(values["reqFlit_id"].c_str());
-    printf("reqFlit_id[%d]\n", reqFlit_id);
+    int reqFlit_id = atoi(values["reqFlit_id"]);
+    printf("reqFlit_id 2 [%d]\n", reqFlit_id);
 }
 
 static int CallbackTracker(void* data, int col_count, char** col_values, char** col_names)
 {
-    map<string, string> values;
+    map<string, char*> values;
     Callback(data, col_count, col_values, col_names, values);
     WriteTracker(col_count, col_values, col_names, values, "end_time");
     return 0;
