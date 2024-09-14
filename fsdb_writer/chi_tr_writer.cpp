@@ -774,11 +774,8 @@ static int Callback0(void *data, int col_count, char** col_values, char** col_na
     return 0;
 }
 
-static int CallbackTracker(void *data, int col_count, char** col_values, char** col_names)
+void WriteTracker(int col_count, char** col_values, char** col_names, map<string, string>& values, const char* end_time)
 {
-    map<string, string> values;
-    Callback(data, col_count, col_values, col_names, values);
-
     fsdbAttrHdlVal tr_val[col_count];
 
     for (int i = 0; i < col_count; i++) {
@@ -806,6 +803,13 @@ static int CallbackTracker(void *data, int col_count, char** col_values, char** 
 
     int reqFlit_id = atoi(values["reqFlit_id"].c_str());
     printf("reqFlit_id[%d]\n", reqFlit_id);
+}
+
+static int CallbackTracker(void* data, int col_count, char** col_values, char** col_names)
+{
+    map<string, string> values;
+    Callback(data, col_count, col_values, col_names, values);
+    WriteTracker(col_count, col_values, col_names, values, "end_time");
     return 0;
 }
 
