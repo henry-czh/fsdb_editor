@@ -766,7 +766,7 @@ fsdbTransId WriteField(int col_count, char** col_values, char** col_names, map<s
     btime.hltag.H = 0;
     btime.hltag.L = atoi(values["time"]);
     etime.hltag.H = 0;
-    etime.hltag.L = atoi(values[end_time]);
+    etime.hltag.L = atoi(values[end_time]) + 1;
 
     fsdbTag64 xtag = {btime.hltag.H, btime.hltag.L};
     ffw_CreateXCoorByHnL(ffw_obj, xtag.H, xtag.L);
@@ -809,7 +809,7 @@ static int CallbackReqFlit(void* data, int col_count, char** col_values, char** 
     Callback(data, col_count, col_values, col_names, values);
     FieldInfo* field_info = (FieldInfo*)data;
     fsdbTransId trans_id = WriteField(col_count, col_values, col_names, values, "time",
-                                      field_info->fsdb_stream, (str_T)"req_flit");
+                                      field_info->fsdb_stream, (str_T)field_info->tb_name);
     ffw_AddRelation(ffw_obj, tracker_relation, tracker_trans_id, trans_id);
     return 0;
 }
