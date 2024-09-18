@@ -229,8 +229,8 @@ typedef struct {
     fsdbStreamHdl fsdb_stream;
 } FieldInfo;
 
-int ReadTracker(const char* tracker_name);
-int ReadReqFlit(FieldInfo* field_info);
+int ReadTracker(FieldInfo*);
+int ReadReqFlit(FieldInfo*);
 void OpenSqliteDB();
 
 //
@@ -248,7 +248,10 @@ int main(int argc, char *argv[])
     __OpenFsdbFileForWrite(&ffw_obj, fname, FSDB_FT_VERILOG);
     __CreateTree(ffw_obj);
     OpenSqliteDB();
-    ReadTracker("reqTrackerT");
+    FieldInfo req = {0, "reqTrackerT_req", reqtracker_stream};
+    FieldInfo snp = {0, "reqTrackerT_snp", snptracker_stream};
+    ReadTracker(&req);
+    ReadTracker(&snp);
     sqlite3_close(db);
     __CreateBusInfo(ffw_obj);
     ffw_Close(ffw_obj);
@@ -786,9 +789,10 @@ static int CallbackTracker(void* data, int col_count, char** col_values, char** 
 {
     map<string, char*> values;
     Callback(data, col_count, col_values, col_names, values);
-    tracker_trans_id = WriteField(col_count, col_values, col_names, values, "end_time", reqtracker_stream, (str_T)"reqtracker");
+    FieldInfo* field_info = (FieldInfo*)data;
+    tracker_trans_id = WriteField(col_count, col_values, col_names, values, "end_time", field_info->fsdb_stream, (str_T)field_info->tb_name);
 
-    FieldInfo field_info[] = {
+    FieldInfo field_infos[] = {
         {atoi(values["reqFlit_id"]),    "reqFlit", req_stream},
         {atoi(values["SnpFlitT0_id"]),  "snpFlit", rxsnp_stream},
         {atoi(values["SnpFlitT1_id"]),  "snpFlit", rxsnp_stream},
@@ -798,7 +802,7 @@ static int CallbackTracker(void* data, int col_count, char** col_values, char** 
         {atoi(values["txdatFlit1_id"]), "datFlit", txdat_stream},
     };
     for (int i = 0; i < 7; i++) {
-        ReadReqFlit(&field_info[i]);
+        ReadReqFlit(&field_infos[i]);
     }
     return 0;
 }
@@ -825,14 +829,13 @@ void OpenSqliteDB()
     }
 }
 
-int ReadTracker(const char* tracker_name)
+int ReadTracker(FieldInfo* field_info)
 {
     char sql[128];
-    sprintf(sql, "select * from v_%s order by time", tracker_name);
+    sprintf(sql, "select * from v_%s order by time", field_info->tb_name);
 
     char* zErrMsg = 0;
-    const char* data = "Callback function called";
-    int rc = sqlite3_exec(db, sql, CallbackTracker, (void*)data, &zErrMsg);
+    int rc = sqlite3_exec(db, sql, CallbackTracker, (void*)field_info, &zErrMsg);
     if (rc != SQLITE_OK) {
         fprintf(stderr, "SQL error: %s\n", zErrMsg);
         sqlite3_free(zErrMsg);
