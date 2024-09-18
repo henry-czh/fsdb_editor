@@ -198,6 +198,10 @@ fsdbAttrHdl     data_attr;
 fsdbAttrHdl     data_check_attr;
 fsdbAttrHdl     poison_attr;
 fsdbAttrHdl     mpam_attr;
+
+fsdbRelationHdl tracker_relation;
+fsdbTransId tracker_trans_id;
+
 //
 // Function Declaration
 //
@@ -341,6 +345,8 @@ __CreateTree(ffwObject* ffw_obj)
     poison_attr                                 = __CreateAttr(ffw_obj, "poison", FSDB_ATTR_DT_INT32, 0, 0, FALSE, FSDB_BDT_GENERIC);
 
     ffw_EndTree(ffw_obj);
+
+    tracker_relation = ffw_CreateRelation(ffw_obj, (str_T)"relevance");
 }
 
 fsdbTransId
@@ -747,7 +753,7 @@ void Callback(void *data, int col_count, char** col_values, char** col_names, ma
     }
 }
 
-void WriteField(int col_count, char** col_values, char** col_names, map<string, char*>& values, const char* end_time, fsdbStreamHdl stream_hdl, str_T sig_name)
+fsdbTransId WriteField(int col_count, char** col_values, char** col_names, map<string, char*>& values, const char* end_time, fsdbStreamHdl stream_hdl, str_T sig_name)
 {
     fsdbAttrHdlVal tr_val[col_count];
 
@@ -773,13 +779,14 @@ void WriteField(int col_count, char** col_values, char** col_names, map<string, 
         ffw_EndTransaction(ffw_obj, tr_trans, etime, tr_val, col_count)) {
         fprintf(stderr, "reqtracker fails during end!\n");
     }
+    return tr_trans;
 }
 
 static int CallbackTracker(void* data, int col_count, char** col_values, char** col_names)
 {
     map<string, char*> values;
     Callback(data, col_count, col_values, col_names, values);
-    WriteField(col_count, col_values, col_names, values, "end_time", reqtracker_stream, (str_T)"reqtracker");
+    tracker_trans_id = WriteField(col_count, col_values, col_names, values, "end_time", reqtracker_stream, (str_T)"reqtracker");
 
     FieldInfo field_info[] = {
         {atoi(values["reqFlit_id"]),    "v_reqFlit", req_stream},
@@ -800,8 +807,10 @@ static int CallbackReqFlit(void* data, int col_count, char** col_values, char** 
 {
     map<string, char*> values;
     Callback(data, col_count, col_values, col_names, values);
-    WriteField(col_count, col_values, col_names, values, "time",
-               ((FieldInfo*)data)->fsdb_stream, (str_T)"req_flit");
+    FieldInfo* field_info = (FieldInfo*)data;
+    fsdbTransId trans_id = WriteField(col_count, col_values, col_names, values, "time",
+                                      field_info->fsdb_stream, (str_T)"req_flit");
+    ffw_AddRelation(ffw_obj, tracker_relation, tracker_trans_id, trans_id);
     return 0;
 }
 
