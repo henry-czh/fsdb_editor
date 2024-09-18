@@ -781,8 +781,14 @@ static int CallbackTracker(void* data, int col_count, char** col_values, char** 
     Callback(data, col_count, col_values, col_names, values);
     WriteField(col_count, col_values, col_names, values, "end_time", reqtracker_stream, (str_T)"reqtracker");
 
-    FieldInfo field_info = {atoi(values["reqFlit_id"]), "v_reqFlit", req_stream};
-    ReadReqFlit(&field_info);
+    FieldInfo field_info[] = {
+        {atoi(values["reqFlit_id"]),   "v_reqFlit", req_stream},
+        {atoi(values["SnpFlitT0_id"]), "v_snpFlit", rxsnp_stream},
+        {atoi(values["SnpFlitT1_id"]), "v_snpFlit", rxsnp_stream},
+    };
+    for (int i = 0; i < 2; i++) {
+        ReadReqFlit(&field_info[i]);
+    }
     return 0;
 }
 
@@ -790,7 +796,8 @@ static int CallbackReqFlit(void* data, int col_count, char** col_values, char** 
 {
     map<string, char*> values;
     Callback(data, col_count, col_values, col_names, values);
-    WriteField(col_count, col_values, col_names, values, "time", req_stream, (str_T)"req_flit");
+    WriteField(col_count, col_values, col_names, values, "time",
+               ((FieldInfo*)data)->fsdb_stream, (str_T)"req_flit");
     return 0;
 }
 
