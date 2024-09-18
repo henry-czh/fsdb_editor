@@ -219,8 +219,14 @@ __CreateAttr(ffwObject* ffw_obj, ffwObject *obj, const char* name,
              fsdbAttrDataType data_type, int larridx, int rarridx,
              bool_T hidden, fsdbBusDataType bus_data_type);
 
+typedef struct {
+    int db_id;
+    const char* tb_name;
+    fsdbStreamHdl fsdb_stream;
+} FieldInfo;
+
 int ReadTracker();
-int ReadReqFlit(int);
+int ReadReqFlit(FieldInfo* field_info);
 void OpenSqliteDB();
 
 //
@@ -775,18 +781,15 @@ static int CallbackTracker(void* data, int col_count, char** col_values, char** 
     Callback(data, col_count, col_values, col_names, values);
     WriteField(col_count, col_values, col_names, values, "end_time", reqtracker_stream, (str_T)"reqtracker");
 
-    int reqFlit_id = atoi(values["reqFlit_id"]);
-    ReadReqFlit(reqFlit_id);
-    printf("reqFlit_id 3 [%d]\n", reqFlit_id);
+    FieldInfo field_info = {atoi(values["reqFlit_id"]), "v_reqFlit", req_stream};
+    ReadReqFlit(&field_info);
     return 0;
 }
 
 static int CallbackReqFlit(void* data, int col_count, char** col_values, char** col_names)
 {
-    printf("CallbackReqFlit 1\n");
     map<string, char*> values;
     Callback(data, col_count, col_values, col_names, values);
-    printf("CallbackReqFlit 2\n");
     WriteField(col_count, col_values, col_names, values, "time", req_stream, (str_T)"req_flit");
     return 0;
 }
@@ -818,19 +821,16 @@ int ReadTracker()
     return 0;
 }
 
-int ReadReqFlit(int id)
+int ReadReqFlit(FieldInfo* field_info)
 {
     char sql[128];
-    sprintf(sql, "select * from v_reqFlit where id = %d", id);
+    sprintf(sql, "select * from %s where id = %d", field_info->tb_name, field_info->db_id);
 
-    char* zErrMsg = 0;
-    const char* data = "Callback function called";
-    int rc = sqlite3_exec(db, sql, CallbackReqFlit, (void*)data, &zErrMsg);
+    char* zErrMsg = NULL;
+    int rc = sqlite3_exec(db, sql, CallbackReqFlit, (void*)field_info, &zErrMsg);
     if (rc != SQLITE_OK) {
         fprintf(stderr, "SQL error: %s\n", zErrMsg);
         sqlite3_free(zErrMsg);
-    } else {
-        fprintf(stdout, "Operation done successfully\n");
     }
     return 0;
 }
