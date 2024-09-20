@@ -88,6 +88,7 @@ static int CallbackReqFlit(void* data, int col_count, char** col_values, char** 
     fsdbTransId trans_id = WriteField(col_count, col_values, col_names, values, "time",
                                       field_info->fsdb_stream, (str_T)field_info->tb_name);
     ffw_AddRelation(ffw_obj, tracker_relation, tracker_trans_id, trans_id);
+    ffw_AddRelation(ffw_obj, tracker_relation, trans_id, tracker_trans_id);
     return 0;
 }
 
