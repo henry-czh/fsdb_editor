@@ -14,14 +14,14 @@ LDFLAGS += -L $(VERDI_HOME)share/FsdbWriter
 C_NAME = chi_tr_writer
 
 OBJS = $(C_NAME).o
-OBJS += $(VERDI_HOME)/share/FsdbReader/linux64/libnsys.so
-OBJS += $(VERDI_HOME)/share/FsdbReader/linux64/libnffr.so
-OBJS += $(VERDI_HOME)/share/FsdbWriter/linux64/libnffw.so
+DLLS += $(VERDI_HOME)/share/FsdbReader/linux64/libnsys.so
+DLLS += $(VERDI_HOME)/share/FsdbReader/linux64/libnffr.so
+DLLS += $(VERDI_HOME)/share/FsdbWriter/linux64/libnffw.so
 #OBJS += misc.o
+OBJS += chi_tr_db.o
 
-run:$(C_NAME).o
-	gcc ${OBJS} -o $(C_NAME) $(LDFLAGS)
-
+run: $(OBJS)
+	gcc $(OBJS) $(DLLS) -o $(C_NAME) $(LDFLAGS)
 
 clean:
 	@-rm  -rf *.o  bus_tr.fsdb* chi_tr_writer novas.* verdiLog
